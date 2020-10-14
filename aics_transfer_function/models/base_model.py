@@ -23,18 +23,17 @@ class BaseModel(ABC):
         When creating your custom class, you need to implement your own initialization.
         In this fucntion, you should first call <BaseModel.__init__(self, opt)>
         Then, you need to define four lists:
-            -- self.loss_names (str list):          specify the training losses that you want to plot and save.
-            -- self.model_names (str list):         specify the images that you want to display and save.
-            -- self.visual_names (str list):        define networks used in our training.
-            -- self.optimizers (optimizer list):    define and initialize optimizers. You can define one optimizer for each network. If two networks are updated at the same time, you can use itertools.chain to group them. See cycle_gan_model.py for an example.
+            -- self.loss_names (str list):          
+            -- self.model_names (str list):       
+            -- self.visual_names (str list):      
+            -- self.optimizers (optimizer list): 
         """
         self.opt = opt
-        self.gpu_ids = opt.gpu_ids
+        self.gpu_ids = [0]
         self.isTrain = opt.isTrain
-        self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')  # get device name: CPU or GPU
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)  # save all the checkpoints to save_dir
-        # if opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
-            # torch.backends.cudnn.benchmark = True
+        self.device = torch.device('cuda:0')
+        self.save_dir = opt.checkpoints_dir
+        #os.path.join(opt.checkpoints_dir, opt.name)
         torch.backends.cudnn.benchmark = True
         self.loss_names = []
         self.model_names = []
@@ -54,24 +53,36 @@ class BaseModel(ABC):
 
     @abstractmethod
     def forward(self):
-        """Run forward pass; called by both functions <optimize_parameters> and <test>."""
+        """
+        Run forward pass; 
+        called by both functions <optimize_parameters> and <test>.
+        """
         pass
 
     @abstractmethod
     def optimize_parameters(self):
-        """Calculate losses, gradients, and update network weights; called in every training iteration"""
+        """
+        Calculate losses, gradients, and update network weights; 
+        called in every training iteration
+        """
         pass
 
     def setup(self, opt):
         """Load and print networks; create schedulers
 
         Parameters:
-            opt (Option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions
+            opt (Option class) -- stores all the experiment flags; needs to be 
+            a subclass of BaseOptions
         """
         if self.isTrain:
-            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
-        if not self.isTrain or opt.continue_train:
-            load_suffix = 'iter_%s' % str(opt.load_iter) if opt.load_iter > 0 else opt.epoch
+            self.schedulers = [
+                networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers
+            ]
+        if not self.isTrain or opt.load_trained_model['path'] is not None:
+            if opt.load_trained_model["load_iter"] > 0:
+                load_suffix = 'iter_%s' % str(opt.load_trained_model["load_iter"])
+            else:
+                load_suffix = 'iter_%s' % str(opt.load_trained_model["epoch"])
             self.load_networks(load_suffix)
         self.print_networks(opt.verbose)
 
@@ -85,8 +96,9 @@ class BaseModel(ABC):
     def test(self):
         """Forward function used in test time.
 
-        This function wraps <forward> function in no_grad() so we don't save intermediate steps for backprop
-        It also calls <compute_visuals> to produce additional visualization results
+        This function wraps <forward> function in no_grad() so we don't save 
+        intermediate steps for backprop. It also calls <compute_visuals> to 
+        produce additional visualization results
         """
         with torch.no_grad():
             self.forward()
@@ -101,9 +113,12 @@ class BaseModel(ABC):
         return self.image_paths
 
     def update_learning_rate(self):
-        """Update learning rates for all the networks; called at the end of every epoch"""
+        """
+        Update learning rates for all the networks; 
+        called at the end of every epoch
+        """
         for scheduler in self.schedulers:
-            if self.opt.lr_policy == 'plateau':
+            if self.opt.training_setting["lr_policy"] == 'plateau':
                 scheduler.step(self.metric)
             else:
                 scheduler.step()
@@ -112,7 +127,10 @@ class BaseModel(ABC):
         print('learning rate = %.7f' % lr)
 
     def get_current_visuals(self):
-        """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
+        """
+        Return visualization images. train.py will display these images 
+        with visdom, and save the images to a HTML
+        """
         visual_ret = OrderedDict()
         for name in self.visual_names:
             if isinstance(name, str):
@@ -120,13 +138,17 @@ class BaseModel(ABC):
         return visual_ret
 
     def get_current_losses(self):
-        """Return traning losses / errors. train.py will print out these errors on console, and save them to a file"""
+        """
+        Return traning losses / errors. train.py will print out these errors 
+        on console, and save them to a file
+        """
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
                 try:
-                    errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
-                except:
+                    errors_ret[name] = float(getattr(self, 'loss_' + name))
+                except Exception as e:
+                    print(e)
                     errors_ret[name] = 0
         return errors_ret
 
@@ -134,7 +156,8 @@ class BaseModel(ABC):
         """Save all the networks to the disk.
 
         Parameters:
-            epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
+            epoch (int) -- current epoch; used in the file name 
+            '%s_net_%s.pth' % (epoch, name)
         """
         for name in self.model_names:
             if isinstance(name, str):
@@ -143,7 +166,7 @@ class BaseModel(ABC):
                 net = getattr(self, 'net' + name)
 
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
-                    torch.save(net.module.cpu().state_dict(), save_path)
+                    torch.save(net.state_dict(), save_path)
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
@@ -160,19 +183,25 @@ class BaseModel(ABC):
                (key == 'num_batches_tracked'):
                 state_dict.pop('.'.join(keys))
         else:
-            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+            self.__patch_instance_norm_state_dict(
+                state_dict,
+                getattr(module, key),
+                keys,
+                i + 1
+            )
 
     def load_networks(self, epoch):
         """Load all the networks from the disk.
 
         Parameters:
-            epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
+            epoch (int) -- current epoch; used in the file name 
+            '%s_net_%s.pth' % (epoch, name)
         """
         for name in self.model_names:
             try:
                 if isinstance(name, str):
-                    #pdb.set_trace()
-                    load_filename = '%s/%s_net_%s.pth' % (self.opt.continue_from, epoch, name)
+                    mp = self.opt.load_trained_model["path"]
+                    load_filename = f"{mp}/{epoch}_net_{name}.pth"
                     load_path = load_filename
                     net = getattr(self, 'net' + name)
                     if isinstance(net, torch.nn.DataParallel):
@@ -185,16 +214,24 @@ class BaseModel(ABC):
                         del state_dict._metadata
 
                     # patch InstanceNorm checkpoints prior to 0.4
-                    for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-                        self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+                    # need to copy keys here because we mutate in loop
+                    for key in list(state_dict.keys()):  
+                        self.__patch_instance_norm_state_dict(
+                            state_dict, 
+                            net,
+                            key.split('.')
+                        )
                     net.load_state_dict(state_dict)
-            except:
+            except Exception as e:
+                print(f"error {e}, when loading models")
                 print(f'model not found from {name}')
                 if not self.isTrain:
                     raise ValueError('model not found\n')
 
     def print_networks(self, verbose):
-        """Print the total number of parameters in the network and (if verbose) network architecture
+        """
+        Print the total number of parameters in the network and (if verbose) 
+        network architecture
 
         Parameters:
             verbose (bool) -- if verbose: print the network architecture
@@ -208,7 +245,8 @@ class BaseModel(ABC):
                     num_params += param.numel()
                 if verbose:
                     print(net)
-                print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))
+                print(f"Network {name}: ")
+                print(f"Total number of parameters: {num_params}")
         print('-----------------------------------------------')
 
     def set_requires_grad(self, nets, requires_grad=False):

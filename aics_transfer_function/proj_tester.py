@@ -6,8 +6,6 @@ from .dataloader.cyclelargenopad_dataset import cyclelargenopadDataset
 from skimage.measure import compare_psnr
 from skimage.measure import compare_ssim
 
-# from util.visualizer import save_images
-# from util import html
 import tifffile
 from tifffile import imread, imsave
 import shutil
@@ -142,8 +140,8 @@ def test():
             from torch import from_numpy
             from  torch.nn.modules.upsampling import Upsample
             from aicsimageio import AICSImage
-            input_reader = AICSImage(fileB) #CZYX
-            new_size = input_reader.data.shape[2:]
+            input_reader = AICSImage(fileB) #STCZYX
+            new_size = input_reader.shape[-3:]
             op = Upsample(size=new_size, mode='trilinear',align_corners=True)
             def resize_(img,op):
                 img = np.expand_dims(img,0)
@@ -155,241 +153,15 @@ def test():
             rB = resize_(rB,op)
             fB = resize_(fB,op)
 
-        # if opt.model in ['stn','pix2pix','rdn','rdnd','edsr','edsrd','edsrda','rdnda'] and opt.name == '20to100':
-        #     with open(prefix+'../height_error.csv','a') as fp:
-        #         img_id = int(fileA.split('/')[-1][:3])
-        #         for i in range(10):
-        #             coord = get_coord(img_id,i)
-        #             if np.round(np.min(fB)) == 0:
-        #                 fB = fB*2 - 1
-        #                 rB = rB*2 - 1
-        #             _,__, height_diff, shift = get_align_kb(fB,rB,coord=coord)
-        #             fp.write(f'{opt.tag},{img_id},{height_diff},{shift},\n')
-        #             print(f'{opt.tag},{img_id},{height_diff},{shift}')
-        #     with open(prefix+'../psnr_ssim.csv','a') as fp:
-        #         img_id = int(fileA.split('/')[-1][:3])
-        #         psnr_,ssim = imagePSNRAndSSIM(rB,fB)
-        #         fp.write(f'{opt.tag},{img_id},{psnr_},{ssim}\n')
-
-
-        # imsave(prefix+'rA.tiff',rA)
-        # imsave(prefix+'rB.tiff',rB)
-        # imsave(prefix+'fB.tiff',fB)
-        # psnr_,ssim = imagePSNRAndSSIM(rB,fB)
-        # print(f'psnr: {psnr_}\nssim: {ssim}')
-
-
         ###########################
         # Temp saving script
         filename_ori = extract_filename(fileA, replace=True, old_name='source.tif', rep_name='pred.tif')
-        #from aicsimageio import omeTifWriter
-        #writer = omeTifWriter.OmeTifWriter(opt.output_path + "/" + filename_ori)
-        #writer.save(fB)
         tif = tifffile.TiffWriter(opt.output_path + "/" + filename_ori, bigtiff=True)
         tif.save(fB, compress=9, photometric='minisblack', metadata=None)
         tif.close()
         #imsave(opt.output_path + "/" + filename_ori,fB)
         print(filename_ori + " saved")
         ###########################
-
-        # print(f'local_psnr {np.mean(psnr_list)}')
-
-        # imsave(prefix+'fB_yz.tiff',np.transpose(fB,(1,0,2)))
-        # imsave(prefix+'fB_xz.tiff',np.transpose(fB,(2,1,0)))
-        # imsave(prefix+'rB_yz.tiff',np.transpose(rB,(1,0,2)))
-        # imsave(prefix+'rB_xz.tiff',np.transpose(rB,(2,1,0)))
-        # imsave(prefix+'rA_yz.tiff',np.transpose(rA,(1,0,2)))
-        # imsave(prefix+'rA_xz.tiff',np.transpose(rA,(2,1,0)))
-
-        # if opt.model == 'cycle_gan':
-        #     imsave(prefix+'fA.tiff',fA)
-        #     imsave(prefix+'recA.tiff',recA)
-        #     imsave(prefix+'recB.tiff',recB)
-        # if opt.model == 'noise_gan':
-        #     imsave(prefix+'ffB.tiff',ffB)
-        #     imsave(prefix+'rrecB.tiff',rrecB)
-        #     imsave(prefix+'fA.tiff',fA)
-        #     imsave(prefix+'recA.tiff',recA)
-        #     imsave(prefix+'recB.tiff',recB)
-        # if opt.model == 'stn':
-        #     imsave(prefix+'fB0.tiff',fB0)
-        #     # print(f'global_psnr {psnr.psnr_local(rB,fB0)}')
-        # if opt.model in ['pix2pix', 'rdn', 'rdnd','edsr','edsrd']:
-        #     pass
-        #     # print(f'global_psnr {psnr.psnr_local(rB,fB)}')
-        # print('--------------')
-
-
-from aicsimageio import AICSImage
-import scipy.signal as ss
-# find_peaks,peak_widths
-from scipy.stats import norm
-import numpy as np
-import random
-from torch import from_numpy
-from  torch.nn.modules.upsampling import Upsample
-from tifffile import imread, imsave
-from glob import glob
-import os
-import pdb
-from sklearn.mixture import GaussianMixture as GMM
-
-
-all_mean = []
-all_std = []
-all_h =  []
-
-def find_peaks(x):
-    ys = np.array(x)
-    ys = ys-ys.min()
-    ys = ys/np.sum(ys)
-
-    mc_sample = [np.random.choice(np.arange(len(x)), p=ys) for _ in range(100000)]
-    # explaination for 100000: We use Monte Carlo method to estimate the peak position;
-    # 100000 is the number of sample for MC.
-    # precistion of MC = C/sqrt(N) , where N is the number of sample, C is a const number.
-    # With 100000, the precistion of peak position estimation is < 0.1 voxel
-    mc_sample = np.array(mc_sample)
-    mc_sample = np.expand_dims(mc_sample,-1)
-    clf = GMM(n_components=2).fit(mc_sample)
-    pk1,pk2 = clf.means_
-    if pk2<pk1:
-        pk1, pk2 = pk2,pk1
-    return [float(pk1),float(pk2)]
-
-def find_peaks_deprecated(x):
-    find_peaks = False
-    for h_std in [-0.50,-0.55,-0.60,-0.65,-0.7,-0.75,-0.8]:
-        pk, _ =ss.find_peaks(x,height=h_std)
-        width = ss.peak_widths(x, pk, rel_height=0.5)[0]
-        if len(pk) == 2 and (width[0] < 20 and width[1] < 20) and pk[0]>6:
-            find_peaks = True
-            break
-    if not find_peaks:
-        return [0,0]
-    return pk
-
-def get_profile(img,coord):
-    (y,x,h,w) = coord
-    stack = img[:,y:y+h,x:x+w]
-    return np.mean(stack,axis=(1,2))
-
-def analysis(l1,l2):
-    n = len(l1)//2
-    lh = []
-    h2s = []
-    for i in range(n):
-        h1 = l1[2*i+1] - l1[2*i]
-        h2 = l2[2*i+1] - l2[2*i]
-        lh.append(h2-h1)
-        h2s.append(h2)
-    all_mean.append(np.mean(lh))
-    all_std.append(np.std(lh))
-    all_h.append(np.mean(h2))
-    print(lh)
-    print(f'mean: {np.mean(lh)};\n std: {np.std(lh)}')
-    return np.mean(lh)
-
-def get_align_kb(img1,img2,coord=None):
-    #coord = (y,x,sy,sx)
-    assert img1.shape[0] == img2.shape[0], f"img1.shape={img1.shape},img2.shape={img2.shape}"
-    assert len(img1.shape) == 3
-    n_sample = 10
-    if coord is not None:
-        n_sample = 1
-    sy = 40
-    sx = 40
-    pk1_list = []
-    pk2_list = []
-    while n_sample != 0:
-        if coord is None:
-            y = random.randint(0,img1.shape[1]-sy-1)
-            x = random.randint(0,img1.shape[2]-sx-1)
-        else:
-            (y,x,sy,sx) = coord
-        p1 = get_profile(img1, (y,x,sy,sx))
-        p2 = get_profile(img2, (y,x,sy,sx))
-        pk1 = find_peaks(p1)
-        pk2 = find_peaks(p2)
-
-        if pk1[0] != 0 and pk2[0]!=0 and abs((pk1[1]-pk1[0])-(pk2[1]-pk2[0])) < 7: #i.e., two sharp peaks, the height difference should not be too large
-            pk1_list.extend(pk1)
-            pk2_list.extend(pk2)
-            # print(pk1,pk2,(y,x,sy,sx))
-            n_sample -= 1
-        elif coord is not None:
-            print(coord)
-            print(ss.find_peaks(p1,height=-0.8))
-            print(ss.find_peaks(p2,height=-0.8))
-            # imsave('img1.tiff',img1)
-            print('peaks can not be automatically found. Insert the peak values manually: (e.g. pk1=[15,32])')
-            pdb.set_trace()
-        pass
-            # raise ValueError('invalid argument coord. should have two peaks')
-    k,b = np.polyfit(pk1_list, pk2_list, 1)    #pk2 = k*pk1 + b
-    # print(pk1_list,pk2_list)
-    height_diff = analysis(pk1_list,pk2_list)
-    shift = np.average([pk2_list[i]-pk1_list[i] for i in range(len(pk1_list))])
-    return k,b,height_diff,shift
-
-
-def get_coord(img,index):
-    five_points_dict = {100:[(74,672,24,26),
-                             (165,486,23,21),
-                             (462,161,23,21),
-                             (436,812,23,21),
-                             (142,55,23,21) ],
-                       110:[(143,695,26,28),
-                            (303,599,33,28),
-                            (210,424,31,28),
-                            (243,171,13,28),
-                            (544,208,12,7),
-                            (595,595,18,18),
-                            (500,804,29,28),
-                            (520,52, 19,15),
-                            (376,310,23,30),
-                            (119,385,24,19),],
-                       111:[(397,111,21,22),
-                            (377,616,25,26),
-                            (505,659,17,7),
-                            (392,786,31,30),
-                            (84 ,289,13,18),
-                            (104,804,22,26),
-                            (260,858,24,18),
-                            (574,122,22,28),
-                            (344,248,30,30),
-                            (560,516,30,26)],
-                       112:[(303,495,10,16),
-                            (248,386,17,9),
-                            (322,280,31,28),
-                            (422,787,39,30),
-                            (202,818,41,15),
-                            (348,608,30,26),
-                            (294,712,24,26),
-                            (512,578,22,24),
-                            (542,356,20,26),
-                            (438,162,22,20)],
-                       113:[(316,804,18,31),
-                            (478,669,16,10),
-                            (525,215,12,11),
-                            (139,123,8,17),
-                            (231,20,33,31),
-                            (100,96,32,36),
-                            (198,402,26,28),
-                            (184,710,24,22),
-                            (576,672,26,22),
-                            (228,430,22,30)],
-                       114:[(492,625,27,21),
-                            (207,699,24,21),
-                            (329,191,18,19),
-                            (560,123,14,15),
-                            (57, 85, 15,13),
-                            (194,658,30,30),
-                            (572,94, 20,28),
-                            (142,510,28,26),
-                            (66, 320,24,30),
-                            (106,772,32,32)]}
-    return five_points_dict[img][index]
 
 
 if __name__ == '__main__':

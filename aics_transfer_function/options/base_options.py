@@ -3,18 +3,19 @@ from pathlib import Path
 import shutil
 import yaml
 import datetime
-import git  # pip3 install gitpython --user
+import git
+from munch import Munch
 
 
 class BaseOptions():
     """
     This class defines options used during both training and test time.
     """
-    def __init__(self, config_file, isTrain):
-        self.isTrain = isTrain
+    def __init__(self, config_file, running_mode):
+        self.running_mode = running_mode
         self.config_file = config_file
 
-    def get_job_name(self, name: str = "TF", tag: str = "default"):
+    def get_job_name(self, name: str = "TF"):
         """
         Generate a unique name for this experiment
 
@@ -23,14 +24,11 @@ class BaseOptions():
         name: str
             the name of your experiment, e.g. 20xto100x, 100xtoSR, etc.
 
-        tag: str
-            a specific tag to be added to the experiment name, e.g., production
-
         Returns
         -----------
         fullname: str
             the full job name in the format of 
-            jobname_jobtag_gitSHA_time
+            jobname_gitSHA_time
         """
 
         now = datetime.datetime.now()
@@ -41,7 +39,7 @@ class BaseOptions():
         except Exception:
             gitsha = 'NoGitSHA'
 
-        fullname = f"{name}_{tag}_{gitsha}_{time}"
+        fullname = f"{name}_{gitsha}_{time}"
         return fullname
 
     def print_options(self, opt):
@@ -60,38 +58,45 @@ class BaseOptions():
         """
 
         with open(self.config_file, 'r') as stream:
-            opt = yaml.load(stream)
+            opt_dict = yaml.load(stream)
 
-        opt.isTrain = self.isTrain   # flag for train/test
+        # convert dictionary to attribute-like object
+        opt = Munch(opt_dict)
 
-        if opt.continue_from != '' and opt.isTrain:
-            opt.continue_train = True
-        else:
-            opt.continue_train = False
+        if self.running_mode.lower() == 'train':
 
-        if self.isTrain:
+            opt.isTrain = True
+
             # create a unique job name for this run
-            opt.job_name = self.get_job_name(opt.name, opt.tag)
+            job_name = self.get_job_name(opt.name)
 
             # create the job directory under the result folder
-            opt.resultroot = Path(opt.results_folder) / Path(opt.job_name)
+            opt.resultroot = Path(opt.save["results_folder"]) / Path(job_name)
             opt.checkpoints_dir = opt.resultroot / "checkpoints"
             os.mkdir(opt.resultroot)
             os.mkdir(opt.checkpoints_dir)
-            if opt.save_training_inspections:
+            if opt.save["save_training_inspections"]:
                 opt.sample_dir = opt.resultroot / "samples"
                 os.mkdir(opt.sample_dir)
 
             # copy the config file into the job directory
-            shutil.copy(opt.config, opt.resultroot)
+            shutil.copy(self.config_file, opt.resultroot)
+
+            # default vaue for train_num
+            opt.training_setting["train_num"] = -1
 
             # TODO: check AA code
-            opt.offsetlogpath = opt.resultroot + 'offsets.log' 
+            opt.offsetlogpath = opt.resultroot / Path('offsets.log') 
+
+        # determine how to resize source image    
+        if "target" in opt.datapath:
+            opt.resizeA = 'toB'
+        else:
+            opt.resizeA = 'ratio'
 
         # check validity of parameters and filing default values
-        # TODO: add all checks
-        opt.train_num = -1
-        assert len(opt.size_in) == 3
+        # TODO: add all checks on required parameters
+        assert len(opt.training_setting["input_patch_size"]) == 3
 
         self.print_options(opt)
         return opt

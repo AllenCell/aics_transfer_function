@@ -47,6 +47,9 @@ requirements = [
     'tqdm',
     'scipy',
     'PyYAML',
+    'gitpython',
+    'aicsimageprocessing',
+    'munch',
 ]
 
 extra_requirements = {

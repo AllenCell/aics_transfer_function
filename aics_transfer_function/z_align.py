@@ -28,13 +28,15 @@ def simple_norm(struct_img, scaling_param, inplace=True):
     struct_img = struct_img * 2.0 - 1.0
     return struct_img.astype('float32')
 
-def read_file(fname,do_norm=False):
+# TODO: need to update
+def read_file(fname, do_norm=False):
     img_reader = AICSImage(fname) #CZYX
-    img = img_reader.data
+    img = img_reader.get_image_data("CZYX", S=0, T=0)
     if do_norm:
         img = simple_norm(img, (3.5, 15))
     img = np.squeeze(img)
     return img
+
 
 def find_peaks(x):
     find_peaks = False
@@ -157,6 +159,7 @@ def mkdir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+# check utils
 def save(name,img):
     assert len(img.shape) == 3
     img = np.expand_dims(img,0)

@@ -28,9 +28,10 @@ def simple_norm(struct_img, scaling_param, inplace=True):
     struct_img = struct_img * 2.0 - 1.0
     return struct_img.astype('float32')
 
+# TODO: need to update
 def read_file(fname,do_norm=False):
-    img_reader = AICSImage(fname) #CZYX
-    img = img_reader.data
+    img_reader = AICSImage(fname)  #CZYX
+    img = img_reader.get_image_data("CZYX", S=0, T=0)
     if do_norm:
         img = simple_norm(img, (3.5, 15))
     img = np.squeeze(img)

@@ -29,5 +29,5 @@ def create_model(options):
         >>> from models import create_model
         >>> model = create_model(opt)
     """
-    model = find_model_using_name(options.model)
+    model = find_model_using_name(options.network["model"])
     return model(options)
