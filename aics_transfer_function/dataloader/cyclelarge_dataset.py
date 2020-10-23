@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from sklearn.utils import shuffle
 from aicsimageio import AICSImage
 from aicsimageprocessing import resize_to
+from tqdm import tqdm
 
 
 class cyclelargeDataset(Dataset):
@@ -126,7 +127,7 @@ class cyclelargeDataset(Dataset):
                                 estimation for {key} is {z_std}. Not accurate!")
                     fixed_dict1[key] = np.mean(offset_raw, axis=0)
 
-        for idxA, fnA in enumerate(filenamesA):
+        for idxA, fnA in tqdm(enumerate(filenamesA)):
             fnnA = fnA.split('/')[-1]
 
             # expected patch is met (when num_patch = -1, the loading will go thr all)
