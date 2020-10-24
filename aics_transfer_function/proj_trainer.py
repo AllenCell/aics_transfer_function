@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
 import numpy as np
 from pathlib import Path
 import torch
 import random
 import time
-from glob import glob
 from .dataloader.cyclelarge_dataset import cyclelargeDataset
 from .dataloader.cyclelargenopad_dataset import cyclelargenopadDataset
 from .models import create_model
 from .util.misc import save_tensor as save
+from .util.misc import get_filenames
 
 
 class ProjectTrainer(object):
@@ -39,8 +38,8 @@ class ProjectTrainer(object):
             print('Debug mode is on. Fewer data will be used.')
 
         # identify all training data
-        filenamesA, filenamesB = self.get_filenames(opt.datapath["source"],
-                                                    opt.datapath["target"])
+        filenamesA, filenamesB = get_filenames(opt.datapath["source"],
+                                               opt.datapath["target"])
 
         # keep only a portion of the training data 
         if opt.training_setting["train_num"] > 0:
@@ -57,17 +56,6 @@ class ProjectTrainer(object):
         self.filenamesA = filenamesA
         self.filenamesB = filenamesB
         self.opt = opt
-
-    @staticmethod
-    def get_filenames(p1, p2, s1=None, s2=None, check_name=False):
-        all1 = sorted(glob(p1 + '*.tiff') + glob(p1 + '*.tif'))
-        all2 = sorted(glob(p2 + '*.tiff') + glob(p2 + '*.tif'))
-
-        assert len(all1) == len(all2), "different number of source and target images"
-        for i in range(len(all1)):
-            assert os.path.basename(all1[i]) == os.path.basename(all2[i]), \
-                f"Filename mismatch: {all1[i]}, {all2[i]}"
-        return all1, all2
 
     def run_trainer(self):
         """

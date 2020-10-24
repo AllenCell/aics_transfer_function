@@ -36,12 +36,12 @@ network:
   lambda_L1   : 1000.0
   init_type   : normal         # 'network initialization [normal | xavier | kaiming | orthogonal]'
   init_gain   : 0.02           # 'scaling factor for normal, xavier and orthogonal.'
+  input_patch_size  : [32,256,256]  # patch size (z_depth,y_height,x_width)
+  batch_size        : 1       # number of images training simultaneously in one iteration, 1 is preferred as default
 
 training_setting:
-  input_patch_size  : [32,256,256]  # patch size (z_depth,y_height,x_width)
   imgs_per_epoch    : -1      # how many images to use? -1 means all
   patches_per_epoch : 50    # a positive integer or -1 (all overlapping patches), 1500 
-  batch_size        : 1       # number of images training simultaneously in one iteration, 1 is preferred as default
   niter             : 100     # number of iter using the starting learning rate
   niter_decay       : 500     # number of iter to linearly decay learning rate to zero
   beta1             : 0.5     # momentum term of adam')

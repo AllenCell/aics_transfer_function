@@ -21,12 +21,12 @@ class cyclelargeDataset(Dataset):
         Dataset.__init__(self)
         self.imgA = []
         self.imgB = []
-        self.size_in = opt.training_setting["input_patch_size"]
+        self.size_in = opt.network["input_patch_size"]
         self.opt = opt
         self.filenamesA = None
         self.filenamesB = None
         self.name = opt.name
-        self.batch_size = opt.training_setting["batch_size"]
+        self.batch_size = opt.network["batch_size"]
         self.resizeA = opt.resizeA
         self.netG = opt.network["netG"]
         self.model = opt.network["model"]
@@ -50,7 +50,7 @@ class cyclelargeDataset(Dataset):
             self.target_norm = getattr(norm_module, func_name_tar)
             self.target_norm_param = self.opt['normalization']['target']['params']
 
-    def load_from_file(self, filenamesA, filenamesB, num_patch):
+    def load_from_file(self, filenamesA, filenamesB=None, num_patch=-1):
         # assumption: transfer is from A to B
         self.imgA = []
         self.imgB = []
@@ -58,7 +58,9 @@ class cyclelargeDataset(Dataset):
         self.imgA_short_path = []
         self.imgB_path = []
 
-        assert len(filenamesA) == len(filenamesB), "source/target num mismatch"
+        if filenamesB is not None:
+            assert len(filenamesA) == len(filenamesB), "source/target num mismatch"
+
         num_data = len(filenamesA)
         assert num_data > 0, "no source type data found"
 
@@ -134,24 +136,27 @@ class cyclelargeDataset(Dataset):
             if len(self.imgA) == num_patch:
                 break
 
-            idxB = idxA
-            fnB = filenamesB[idxB]
-
             # load source domain image
             source_reader = AICSImage(fnA)  # STCZYX
             src_img = source_reader.get_image_data("ZYX", S=0, T=0, C=0)
 
-            # load target domain image
-            target_reader = AICSImage(fnB)  # STCZYX
-            tar_img = target_reader.get_image_data("ZYX", S=0, T=0, C=0)
-
             # run intensity normalization
             src_img = self.source_norm(src_img, bulk_params=self.source_norm_param)
-            tar_img = self.target_norm(tar_img, bulk_params=self.target_norm_param)
 
-            # determine the image size
-            if "target" in self.opt.datapath:
+            if filenamesB is not None:
+                idxB = idxA
+                fnB = filenamesB[idxB]
+
+                # load target domain image
+                target_reader = AICSImage(fnB)  # STCZYX
+                tar_img = target_reader.get_image_data("ZYX", S=0, T=0, C=0)
+
+                # run intensity normalization
+                tar_img = self.target_norm(tar_img, bulk_params=self.target_norm_param)
+
+                # determine new size for source
                 new_size = (tar_img.shape[0], tar_img.shape[1], tar_img.shape[2])
+
             else:
                 # TODO: check this parameter: self.opt.ratio_param
                 nz = int(np.round(src_img.shape[0] * self.opt.ratio_param(0)))
@@ -159,9 +164,7 @@ class cyclelargeDataset(Dataset):
                 nx = int(np.round(src_img.shape[2] * self.opt.ratio_param(2)))
                 new_size = (nz, ny, nx)
 
-            # upsample the image
-            if "target" in self.opt.datapath:
-                src_img = resize_to(src_img, new_size, method='bilinear')
+            src_img = resize_to(src_img, new_size, method='bilinear')
 
             # TODO: check AA code
             '''
@@ -215,22 +218,23 @@ class cyclelargeDataset(Dataset):
 
             if Stitch:
                 overlap_step = 0.5
-                self.positionB = [self.new_size_dB, ]
-                self.positionA = [self.new_size_dA, ]
+                if filenamesB is not None:
+                    self.positionB = [new_size, ]
+                self.positionA = [new_size, ]
                 px_list, py_list, pz_list = [], [], []
                 px, py, pz = 0, 0, 0
-                while px < self.new_size_dA[2] - self.size_in[2]:
+                while px < new_size[2] - self.size_in[2]:
                     px_list.append(px)
                     px += int(self.size_in[2] * overlap_step)
-                px_list.append(self.new_size_dA[2] - self.size_in[2])
-                while py < self.new_size_dA[1] - self.size_in[1]:
+                px_list.append(new_size[2] - self.size_in[2])
+                while py < new_size[1] - self.size_in[1]:
                     py_list.append(py)
                     py += int(self.size_in[1] * overlap_step)
-                py_list.append(self.new_size_dA[1] - self.size_in[1])
-                while pz < self.new_size_dA[0] - self.size_in[0]:
+                py_list.append(new_size[1] - self.size_in[1])
+                while pz < new_size[0] - self.size_in[0]:
                     pz_list.append(pz)
                     pz += int(self.size_in[0] * overlap_step)
-                pz_list.append(self.new_size_dA[0] - self.size_in[0])
+                pz_list.append(new_size[0] - self.size_in[0])
                 for pz_in in pz_list:
                     for py_in in py_list:
                         for px_in in px_list:
@@ -243,12 +247,17 @@ class cyclelargeDataset(Dataset):
                             pz_out = pz_in * self.up_scale[0]
                             py_out = py_in * self.up_scale[1]
                             px_out = px_in * self.up_scale[2]
-                            (self.imgB).append(tar_img
-                                               [:, pz_out:pz_out + self.size_out[0],
-                                                py_out:py_out + self.size_out[1],
-                                                px_out:px_out + self.size_out[2]])
-                            (self.imgB_path).append(fnB)
-                            self.positionB.append((pz_out, py_out, px_out))
+
+                            if filenamesB is not None:
+                                (self.imgB).append(
+                                    tar_img
+                                    [:, pz_out:pz_out + self.size_out[0],
+                                        py_out:py_out + self.size_out[1],
+                                        px_out:px_out + self.size_out[2]]
+                                )
+                                (self.imgB_path).append(fnB)
+                                self.positionB.append((pz_out, py_out, px_out))
+
                             self.positionA.append((pz_in, py_in, px_in))
                             self.for_calc_ave_offset.append(False)
             else:

@@ -63,8 +63,8 @@ class BaseOptions():
         # convert dictionary to attribute-like object
         opt = Munch(opt_dict)
 
+        # load and validation training config
         if self.running_mode.lower() == 'train':
-
             opt.isTrain = True
 
             # create a unique job name for this run
@@ -88,15 +88,40 @@ class BaseOptions():
             # TODO: check AA code
             opt.offsetlogpath = opt.resultroot / Path('offsets.log') 
 
-        # determine how to resize source image    
-        if "target" in opt.datapath:
+            # determine how to resize source image    
             opt.resizeA = 'toB'
-        else:
+        
+        elif self.running_mode.lower() == 'validaiton':
+            opt.isTrain = False
+            
+            # check output folder exists
+            opt.output_path = Path(opt.datapath["prediction"])
+            if not opt.output_path.exists():
+                opt.output_path.mkdir(parent=True)
+
+            # copy the config file into the prediction directory
+            shutil.copy(self.config_file, opt.output_path)
+
+            # determine how to resize source image    
+            opt.resizeA = 'toB'
+
+        elif self.running_mode.lower() == 'inference':
+            opt.isTrain = False
+
+            # check output folder exists
+            opt.output_path = Path(opt.datapath["prediction"])
+            if not opt.output_path.exists():
+                opt.output_path.mkdir(parent=True)
+
+            # copy the config file into the prediction directory
+            shutil.copy(self.config_file, opt.output_path)
+
+            # determine how to resize source image 
             opt.resizeA = 'ratio'
 
         # check validity of parameters and filing default values
         # TODO: add all checks on required parameters
-        assert len(opt.training_setting["input_patch_size"]) == 3
+        assert len(opt.network["input_patch_size"]) == 3
 
         self.print_options(opt)
         return opt
