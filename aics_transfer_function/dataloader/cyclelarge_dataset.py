@@ -25,7 +25,8 @@ class cyclelargeDataset(Dataset):
         self.opt = opt
         self.filenamesA = None
         self.filenamesB = None
-        self.name = opt.name
+        if opt.isTrain:  # only need a name when training
+            self.name = opt.name
         self.batch_size = opt.network["batch_size"]
         self.resizeA = opt.resizeA
         self.netG = opt.network["netG"]
@@ -238,10 +239,15 @@ class cyclelargeDataset(Dataset):
                 for pz_in in pz_list:
                     for py_in in py_list:
                         for px_in in px_list:
-                            (self.imgA).append(src_img
-                                               [:, pz_in:pz_in + self.size_in[0],
-                                                py_in:py_in + self.size_in[1],
-                                                px_in:px_in + self.size_in[2]])
+                            (self.imgA).append(
+                                np.expand_dims(
+                                    src_img[
+                                        pz_in:pz_in + self.size_in[0],
+                                        py_in:py_in + self.size_in[1],
+                                        px_in:px_in + self.size_in[2]
+                                    ], axis=0
+                                )
+                            )
                             (self.imgA_path).append(fnA)
                             (self.imgA_short_path).append(fnnA)
                             pz_out = pz_in * self.up_scale[0]
@@ -250,10 +256,13 @@ class cyclelargeDataset(Dataset):
 
                             if filenamesB is not None:
                                 (self.imgB).append(
-                                    tar_img
-                                    [:, pz_out:pz_out + self.size_out[0],
-                                        py_out:py_out + self.size_out[1],
-                                        px_out:px_out + self.size_out[2]]
+                                    np.expand_dims(
+                                        tar_img[
+                                            pz_out:pz_out + self.size_out[0],
+                                            py_out:py_out + self.size_out[1],
+                                            px_out:px_out + self.size_out[2]
+                                        ], axis=0
+                                    )
                                 )
                                 (self.imgB_path).append(fnB)
                                 self.positionB.append((pz_out, py_out, px_out))

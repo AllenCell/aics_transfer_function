@@ -10,13 +10,13 @@ datapath:
 normalization:
   source:
     method: simple_norm
-    params: ("middle_otsu", 1.0, 15.5)
+    params: ("middle_otsu", 3.0, 14.5)
   target:
     method: simple_norm
-    params: ("middle_otsu", 1.0, 19.5)
+    params: ("middle_otsu", 1.5, 14.0)
 
 load_trained_model:
-  path        : /allen/aics/assay-dev/computational/data/transfer_function_feasibility/data_for_paper/FBL_20x_100x/training_result_paper/0627_2246_10b8_20to100_URAz_955983/checkpoints/20to100 
+  path        : /allen/aics/assay-dev/computational/data/transfer_function_production/hipsc_h2b/models/h2b_20to100_fe06_1022_2128/checkpoints/
   epoch       : latest # which epoch to load? set to latest to use latest cached model
   load_iter   : -1             # which iteration to load? if load_iter > 0, the code will load models by iter_[load_iter]; otherwise, the code will load models by [epoch]
 

@@ -64,7 +64,7 @@ def arrange(opt, data, output, position):
     output[zaa:zbb, yaa:ybb, xaa:xbb] = data[z1:z2, y1:y2, x1:x2]
 
 
-class ProjectTrainer(object):
+class ProjectTester(object):
     """
     Main class for applying a trained transfer function model
     """
@@ -88,8 +88,6 @@ class ProjectTrainer(object):
         dataset = cyclelargeDataset(self.opt, aligned=True)
 
         self.opt.size_out = dataset.get_size_out()
-        dataset_size = len(dataset)    # get the number of images in the dataset.
-        print('The number of training images = %d' % dataset_size)
 
         for fileA in filenamesA:
             dataset.load_from_file([fileA, ])
@@ -126,8 +124,6 @@ class ProjectTrainer(object):
         dataset = cyclelargeDataset(self.opt, aligned=True)
 
         self.opt.size_out = dataset.get_size_out()
-        dataset_size = len(dataset)    # get the number of images in the dataset.
-        print('The number of training images = %d' % dataset_size)
 
         for fileA, fileB in zip(filenamesA, filenamesB):
             dataset.load_from_file([fileA, ], [fileB, ])
@@ -160,8 +156,7 @@ class ProjectTrainer(object):
             # Temp saving script
             filename_ori = extract_filename(fileA, replace=True, old_name='source.tif',
                                             rep_name='pred.tiff')
-            tif = tifffile.TiffWriter(self.opt.output_path + "/" + filename_ori,
-                                      bigtiff=True)
+            tif = tifffile.TiffWriter(self.opt.output_path / filename_ori, bigtiff=True)
             tif.save(fB, compress=9, photometric='minisblack', metadata=None)
             tif.close()
             print(filename_ori + " saved")

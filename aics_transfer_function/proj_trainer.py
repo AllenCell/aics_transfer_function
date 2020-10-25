@@ -6,7 +6,6 @@ import torch
 import random
 import time
 from .dataloader.cyclelarge_dataset import cyclelargeDataset
-from .dataloader.cyclelargenopad_dataset import cyclelargenopadDataset
 from .models import create_model
 from .util.misc import save_tensor as save
 from .util.misc import get_filenames

@@ -11,11 +11,11 @@ import torch
 
 from aics_transfer_function.options import BaseOptions
 from aics_transfer_function.proj_trainer import ProjectTrainer
-#  from aics_transfer_function.proj_tester import ProjectTester
+from aics_transfer_function.proj_tester import ProjectTester
 
 # Global object
 TRAIN_MODE = "train"
-VALID_MODE = "validate"
+VALID_MODE = "validation"
 INFER_MODE = "inference"
 
 ###############################################################################

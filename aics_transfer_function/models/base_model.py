@@ -32,8 +32,8 @@ class BaseModel(ABC):
         self.gpu_ids = [0]
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:0')
-        self.save_dir = opt.checkpoints_dir
-        #os.path.join(opt.checkpoints_dir, opt.name)
+        if opt.mode == "train":
+            self.save_dir = opt.checkpoints_dir
         torch.backends.cudnn.benchmark = True
         self.loss_names = []
         self.model_names = []
@@ -82,7 +82,7 @@ class BaseModel(ABC):
             if opt.load_trained_model["load_iter"] > 0:
                 load_suffix = 'iter_%s' % str(opt.load_trained_model["load_iter"])
             else:
-                load_suffix = 'iter_%s' % str(opt.load_trained_model["epoch"])
+                load_suffix = str(opt.load_trained_model["epoch"])
             self.load_networks(load_suffix)
         self.print_networks(opt.verbose)
 

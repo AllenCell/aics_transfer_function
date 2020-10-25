@@ -18,9 +18,17 @@ class Pix2PixModel(BaseModel):
             a subclass of BaseOptions
         """
         BaseModel.__init__(self, opt)
+
+        # specify the models you want to save to the disk. The training/test scripts
+        # will call <BaseModel.save_networks> and <BaseModel.load_networks>
+        if self.isTrain:
+            self.model_names = ['G', 'D']
+            train_opt = opt.training_setting
+        else:  # during test time, only load G
+            self.model_names = ['G']
+
         net_opt = opt.network
         self.net_opt = net_opt
-        train_opt = opt.training_setting
         self.netG_name = net_opt["netG"]
         # specify the training losses you want to print out. 
         # The training/test scripts will call <BaseModel.get_current_losses>
@@ -28,12 +36,7 @@ class Pix2PixModel(BaseModel):
         # specify the images you want to save/display. The training/test scripts 
         # will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
-        # specify the models you want to save to the disk. The training/test scripts
-        # will call <BaseModel.save_networks> and <BaseModel.load_networks>
-        if self.isTrain:
-            self.model_names = ['G', 'D']
-        else:  # during test time, only load G
-            self.model_names = ['G']
+
         # define networks (both generator and discriminator)
         self.netG = networks.define_G(
             net_opt["input_nc"],

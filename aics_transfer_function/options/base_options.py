@@ -90,10 +90,10 @@ class BaseOptions():
 
             # determine how to resize source image    
             opt.resizeA = 'toB'
-        
-        elif self.running_mode.lower() == 'validaiton':
+
+        elif self.running_mode.lower() == 'validation':
             opt.isTrain = False
-            
+
             # check output folder exists
             opt.output_path = Path(opt.datapath["prediction"])
             if not opt.output_path.exists():
@@ -119,9 +119,13 @@ class BaseOptions():
             # determine how to resize source image 
             opt.resizeA = 'ratio'
 
+        else:
+            raise NotImplementedError("mode name errir")
+
         # check validity of parameters and filing default values
         # TODO: add all checks on required parameters
         assert len(opt.network["input_patch_size"]) == 3
 
+        opt.mode = self.running_mode.lower()
         self.print_options(opt)
         return opt
