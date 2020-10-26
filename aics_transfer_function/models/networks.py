@@ -14,25 +14,27 @@ class Identity(nn.Module):
         return x
 
 
-def get_norm_layer(norm_type='instance'):
+def get_norm_layer(norm_type="instance"):
     """Return a normalization layer
 
     Parameters:
         norm_type (str) -- the name of the normalization layer: batch | instance
 
-    For BatchNorm, we use learnable affine parameters and track running statistics 
+    For BatchNorm, we use learnable affine parameters and track running statistics
     (mean/stddev).
-    For InstanceNorm, we do not use learnable affine parameters. We do not track 
+    For InstanceNorm, we do not use learnable affine parameters. We do not track
     running statistics.
     """
-    if norm_type == 'batch':
-        norm_layer = functools.partial(nn.BatchNorm3d, affine=True,
-                                       track_running_stats=True)
-    elif norm_type == 'instance':
-        norm_layer = functools.partial(nn.InstanceNorm3d, affine=False,
-                                       track_running_stats=False)
+    if norm_type == "batch":
+        norm_layer = functools.partial(
+            nn.BatchNorm3d, affine=True, track_running_stats=True
+        )
+    elif norm_type == "instance":
+        norm_layer = functools.partial(
+            nn.InstanceNorm3d, affine=False, track_running_stats=False
+        )
     else:
-        raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
+        raise NotImplementedError("normalization layer [%s] is not found" % norm_type)
     return norm_layer
 
 
@@ -41,52 +43,47 @@ def get_scheduler(optimizer, opt):
 
     Parameters:
         optimizer          -- the optimizer of the network
-        opt (option class) -- stores all the experiment flags; needs to be a subclass 
-                              of BaseOptions．lr_policy is the name of learning rate 
+        opt (option class) -- stores all the experiment flags; needs to be a subclass
+                              of BaseOptions．lr_policy is the name of learning rate
                               policy: linear | step | plateau | cosine
 
     For 'linear', we keep the same learning rate for the first <niter> epochs
     and linearly decay the rate to zero over the next <niter_decay> epochs.
-    For other schedulers (step, plateau, and cosine), we use the default PyTorch 
+    For other schedulers (step, plateau, and cosine), we use the default PyTorch
     schedulers. See https://pytorch.org/docs/stable/optim.html for more details.
     """
-    if opt.training_setting["lr_policy"] == 'linear':
+    if opt.training_setting["lr_policy"] == "linear":
+
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + 1 - opt.training_setting["niter"]) / \
-                float(opt.training_setting["niter_decay"] + 1)
+            lr_l = 1.0 - max(0, epoch + 1 - opt.training_setting["niter"]) / float(
+                opt.training_setting["niter_decay"] + 1
+            )
             return lr_l
+
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
-    elif opt.training_setting["lr_policy"] == 'step':
+    elif opt.training_setting["lr_policy"] == "step":
         scheduler = lr_scheduler.StepLR(
-            optimizer,
-            step_size=opt.training_setting["lr_decay_iters"],
-            gamma=0.1
+            optimizer, step_size=opt.training_setting["lr_decay_iters"], gamma=0.1
         )
-    elif opt.training_setting["lr_policy"] == 'plateau':
+    elif opt.training_setting["lr_policy"] == "plateau":
         scheduler = lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode='min',
-            factor=0.2,
-            threshold=0.01,
-            patience=5
+            optimizer, mode="min", factor=0.2, threshold=0.01, patience=5
         )
-    elif opt.training_setting["lr_policy"] == 'cosine':
+    elif opt.training_setting["lr_policy"] == "cosine":
         scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer,
-            T_max=opt.training_setting["niter"],
-            eta_min=0
+            optimizer, T_max=opt.training_setting["niter"], eta_min=0
         )
     else:
-        return NotImplementedError('your learning rate policy is not implemented')
+        return NotImplementedError("your learning rate policy is not implemented")
     return scheduler
 
 
-def init_weights(net, init_type='normal', init_gain=0.02):
+def init_weights(net, init_type="normal", init_gain=0.02):
     """Initialize network weights.
 
     Parameters:
         net (network)   -- network to be initialized
-        init_type (str) -- the name of an initialization method: 
+        init_type (str) -- the name of an initialization method:
                            normal | xavier | kaiming | orthogonal
         init_gain (float)    -- scaling factor for normal, xavier and orthogonal.
 
@@ -94,44 +91,45 @@ def init_weights(net, init_type='normal', init_gain=0.02):
     might work better for some applications. Feel free to try yourself.
     """
     # define the initialization function
-    def init_func(m):  
+    def init_func(m):
         classname = m.__class__.__name__
-        if hasattr(m, 'weight') and \
-           (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-            if init_type == 'normal':
+        if hasattr(m, "weight") and (
+            classname.find("Conv") != -1 or classname.find("Linear") != -1
+        ):
+            if init_type == "normal":
                 init.normal_(m.weight.data, 0.0, init_gain)
-            elif init_type == 'xavier':
+            elif init_type == "xavier":
                 init.xavier_normal_(m.weight.data, gain=init_gain)
-            elif init_type == 'kaiming':
-                init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-            elif init_type == 'orthogonal':
+            elif init_type == "kaiming":
+                init.kaiming_normal_(m.weight.data, a=0, mode="fan_in")
+            elif init_type == "orthogonal":
                 init.orthogonal_(m.weight.data, gain=init_gain)
             else:
                 raise NotImplementedError("init method is not implemented")
-            if hasattr(m, 'bias') and m.bias is not None:
+            if hasattr(m, "bias") and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm3d') != -1:
-            # Note: BatchNorm Layer's weight is not a matrix; 
+        elif classname.find("BatchNorm3d") != -1:
+            # Note: BatchNorm Layer's weight is not a matrix;
             # only normal distribution applies.
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
-    print('initialize network with %s' % init_type)
+    print("initialize network with %s" % init_type)
     net.apply(init_func)  # apply the initialization function <init_func>
 
 
-def init_net(net, init_type='normal', init_gain=0.02):
+def init_net(net, init_type="normal", init_gain=0.02):
     """Initialize a network
     Parameters:
         net (network)      -- the network to be initialized
-        init_type (str)    -- the name of an initialization method: 
+        init_type (str)    -- the name of an initialization method:
                               normal | xavier | kaiming | orthogonal
         gain (float)       -- scaling factor for normal, xavier and orthogonal.
 
     Return an initialized network.
     """
-    assert(torch.cuda.is_available()), "GPU is not available"
-    net.to(torch.device('cuda:0'))
+    assert torch.cuda.is_available(), "GPU is not available"
+    net.to(torch.device("cuda:0"))
     # net = torch.nn.DataParallel(net, torch.device('cuda:0'))  # multi-GPUs
     init_weights(net, init_type, init_gain=init_gain)
     return net
@@ -139,15 +137,15 @@ def init_net(net, init_type='normal', init_gain=0.02):
 
 # TODO: add type hint
 def define_G(
-        input_nc,
-        output_nc,
-        ngf,
-        netG,
-        norm='batch',
-        use_dropout=False,
-        init_type='normal',
-        init_gain=0.02,
-        unet_upsampling=True
+    input_nc,
+    output_nc,
+    ngf,
+    netG,
+    norm="batch",
+    use_dropout=False,
+    init_type="normal",
+    init_gain=0.02,
+    unet_upsampling=True,
 ):
     """Create a generator
 
@@ -157,7 +155,7 @@ def define_G(
         ngf (int) -- the number of filters in the last conv layer
         netG (str) -- the architecture's name:
                       resnet_9blocks | resnet_6blocks | unet_256 | unet_128
-        norm (str) -- the name of normalization layers used in the network: 
+        norm (str) -- the name of normalization layers used in the network:
                       batch | instance | none
         use_dropout (bool) -- if use dropout layers.
         init_type (str)    -- the name of our initialization method.
@@ -166,15 +164,15 @@ def define_G(
     Returns a generator
 
     Our current implementation provides two types of generators:
-        U-Net: [unet_128] (for 128x128 input images) and [unet_256] 
+        U-Net: [unet_128] (for 128x128 input images) and [unet_256]
         (for 256x256 input images)
         The original U-Net paper: https://arxiv.org/abs/1505.04597
 
-        Resnet-based generator: [resnet_6blocks] (with 6 Resnet blocks) 
+        Resnet-based generator: [resnet_6blocks] (with 6 Resnet blocks)
                                 and [resnet_9blocks] (with 9 Resnet blocks)
-        Resnet-based generator consists of several Resnet blocks between 
-        a few downsampling/upsampling operations. We adapt Torch code from 
-        Justin Johnson's neural style transfer project 
+        Resnet-based generator consists of several Resnet blocks between
+        a few downsampling/upsampling operations. We adapt Torch code from
+        Justin Johnson's neural style transfer project
         (https://github.com/jcjohnson/fast-neural-style).
 
 
@@ -183,43 +181,43 @@ def define_G(
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    if netG == 'resnet_9blocks':
+    if netG == "resnet_9blocks":
         net = ResnetGenerator(
             input_nc,
             output_nc,
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            n_blocks=9
+            n_blocks=9,
         )
-    elif netG == 'r9cr':
+    elif netG == "r9cr":
         net = ResnetGeneratorCR(
             input_nc,
             output_nc,
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            n_blocks=9
+            n_blocks=9,
         )
-    elif netG == 'resnopad':
+    elif netG == "resnopad":
         net = ResnetGeneratorNopad(
             input_nc,
             output_nc,
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            n_blocks=9
+            n_blocks=9,
         )
-    elif netG == 'resnet_6blocks':
+    elif netG == "resnet_6blocks":
         net = ResnetGenerator(
             input_nc,
             output_nc,
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            n_blocks=6
+            n_blocks=6,
         )
-    elif netG == 'unet_64':
+    elif netG == "unet_64":
         net = UnetGenerator(
             input_nc,
             output_nc,
@@ -227,9 +225,9 @@ def define_G(
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )
-    elif netG == 'unet_128':
+    elif netG == "unet_128":
         net = UnetGenerator(
             input_nc,
             output_nc,
@@ -237,9 +235,9 @@ def define_G(
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )
-    elif netG == 'unet_256':
+    elif netG == "unet_256":
         net = UnetGenerator(
             input_nc,
             output_nc,
@@ -247,9 +245,9 @@ def define_G(
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )
-    elif netG == 'unet_512_nopad':  # (32,512,512) --> (28,152,152)
+    elif netG == "unet_512_nopad":  # (32,512,512) --> (28,152,152)
         net = UnetGeneratorNopad(
             input_nc,
             output_nc,
@@ -257,10 +255,10 @@ def define_G(
             ngf,
             norm_layer=norm_layer,
             use_dropout=use_dropout,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )
     else:
-        raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
+        raise NotImplementedError("Generator model name [%s] is not recognized" % netG)
     return init_net(net, init_type, init_gain)
 
 
@@ -270,10 +268,10 @@ def define_NG(
     output_shape,
     ngf,
     netG,
-    norm='batch',
+    norm="batch",
     use_dropout=False,
-    init_type='normal',
-    init_gain=0.02
+    init_type="normal",
+    init_gain=0.02,
 ):
     net = NoiseResnetGenerator(1, output_shape)
     return init_net(net, init_type, init_gain)
@@ -284,20 +282,15 @@ def define_S(
     input_nc,
     ndf,
     n_layers_D=3,
-    norm='batch',
-    init_type='normal',
+    norm="batch",
+    init_type="normal",
     init_gain=0.02,
-    device=None
+    device=None,
 ):
     norm_layer = get_norm_layer(norm_type=norm)
-    net = FindOffsets(
-        input_nc,
-        ndf,
-        n_layers_D,
-        norm_layer=norm_layer,
-        device=device
-    )
+    net = FindOffsets(input_nc, ndf, n_layers_D, norm_layer=norm_layer, device=device)
     return init_net(net, init_type, init_gain)
+
 
 # def shift(tensor,offsets_zyx,device=None):
 #     '''
@@ -307,7 +300,7 @@ def define_S(
 #     assert len(tensor.shape) == 5
 #     dz,dy,dx = offsets_zyx.type(torch.float32)
 #     nz,ny,nx = tensor.shape[2:]
-#     z_linspace = torch.linspace(-1,1,steps=nz,device=device)+dz*2.0/nz     
+#     z_linspace = torch.linspace(-1,1,steps=nz,device=device)+dz*2.0/nz
 #     y_linspace = torch.linspace(-1,1,steps=ny,device=device)+dy*2.0/ny
 #     x_linspace = torch.linspace(-1,1,steps=nx,device=device)+dx*2.0/nx
 #     z_grid, y_grid, x_grid = torch.meshgrid(z_linspace, y_linspace, x_linspace)
@@ -320,12 +313,7 @@ class FindOffsets(nn.Module):
     """Defines a PatchGAN discriminator"""
 
     def __init__(
-        self,
-        input_nc,
-        ndf=64,
-        n_layers=3,
-        norm_layer=nn.BatchNorm3d,
-        device=None
+        self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm3d, device=None
     ):
         """Construct a PatchGAN discriminator
 
@@ -346,7 +334,7 @@ class FindOffsets(nn.Module):
         padw = 0
         sequence = [
             nn.Conv3d(input_nc, ndf, kernel_size=kw, stride=1, padding=padw),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
         nf_mult = 1
         nf_mult_prev = 1
@@ -360,10 +348,10 @@ class FindOffsets(nn.Module):
                     kernel_size=kw,
                     stride=1,
                     padding=padw,
-                    bias=use_bias
+                    bias=use_bias,
                 ),
                 norm_layer(ndf * nf_mult),
-                nn.LeakyReLU(0.2, True)
+                nn.LeakyReLU(0.2, True),
             ]
 
         nf_mult_prev = nf_mult
@@ -375,10 +363,10 @@ class FindOffsets(nn.Module):
                 kernel_size=kw,
                 stride=1,
                 padding=padw,
-                bias=use_bias
+                bias=use_bias,
             ),
             norm_layer(ndf * nf_mult),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
 
         sequence += [
@@ -398,18 +386,16 @@ class FindOffsets(nn.Module):
         y_linspace = torch.linspace(-1, 1, steps=ny, device=self.device)
         x_linspace = torch.linspace(-1, 1, steps=nx, device=self.device)
         z_grid, y_grid, x_grid = torch.meshgrid(z_linspace, y_linspace, x_linspace)
-        grid = torch.cat([
-            x_grid.unsqueeze(-1),
-            y_grid.unsqueeze(-1),
-            z_grid.unsqueeze(-1)
-        ], dim=-1).unsqueeze(0)
+        grid = torch.cat(
+            [x_grid.unsqueeze(-1), y_grid.unsqueeze(-1), z_grid.unsqueeze(-1)], dim=-1
+        ).unsqueeze(0)
         return grid
 
     def shift(self, tensor, offsets_zyx):
-        '''
+        """
         dz>0: stack goes up (-z:-1)=padding
         dy>0: goes up; dx>0: goes right
-        '''
+        """
         assert len(tensor.shape) == 5
         dz, dy, dx = offsets_zyx.type(torch.float32)
         nz, ny, nx = tensor.shape[2:]
@@ -417,16 +403,14 @@ class FindOffsets(nn.Module):
         y_linspace = torch.linspace(-1, 1, steps=ny, device=self.device) + dy * 2.0 / ny
         x_linspace = torch.linspace(-1, 1, steps=nx, device=self.device) + dx * 2.0 / nx
         z_grid, y_grid, x_grid = torch.meshgrid(z_linspace, y_linspace, x_linspace)
-        grid = torch.cat([
-            x_grid.unsqueeze(-1),
-            y_grid.unsqueeze(-1),
-            z_grid.unsqueeze(-1)
-        ], dim=-1).unsqueeze(0)
-        return F.grid_sample(tensor, grid, padding_mode='border')
+        grid = torch.cat(
+            [x_grid.unsqueeze(-1), y_grid.unsqueeze(-1), z_grid.unsqueeze(-1)], dim=-1
+        ).unsqueeze(0)
+        return F.grid_sample(tensor, grid, padding_mode="border")
 
     def forward(self, input, base):
         """Standard forward."""
-        assert input.shape[0] == 1, 'only support batch_size=1 for stn'
+        assert input.shape[0] == 1, "only support batch_size=1 for stn"
         pred = self.model(input)
         self.offsets = torch.mean(pred, dim=(2, 3, 4), keepdim=False, out=None)[0]
         aligned = self.shift(base, self.offsets)
@@ -438,7 +422,7 @@ class FindOffsets(nn.Module):
         return aligned
 
     def get_offsets(self, input):
-        assert input.shape[0] == 1, 'only support batch_size=1 for stn'
+        assert input.shape[0] == 1, "only support batch_size=1 for stn"
         pred = self.model(input)
         offsets = torch.mean(pred, dim=(2, 3, 4), keepdim=False, out=None)[0]
         return offsets
@@ -457,6 +441,7 @@ class GaussianSmoothing(nn.Module):
         dim (int, optional): The number of dimensions of the data.
             Default value is 2 (spatial).
     """
+
     def __init__(self, channels, kernel_size, sigma, dim=3):
         super(GaussianSmoothing, self).__init__()
         if isinstance(kernel_size, numbers.Number):
@@ -468,15 +453,15 @@ class GaussianSmoothing(nn.Module):
         # gaussian function of each dimension.
         kernel = 1
         meshgrids = torch.meshgrid(
-            [
-                torch.arange(size, dtype=torch.float32)
-                for size in kernel_size
-            ]
+            [torch.arange(size, dtype=torch.float32) for size in kernel_size]
         )
         for size, std, mgrid in zip(kernel_size, sigma, meshgrids):
             mean = (size - 1) / 2
-            kernel *= 1 / (std * math.sqrt(2 * math.pi)) * \
-                torch.exp(-((mgrid - mean) / std) ** 2 / 2)
+            kernel *= (
+                1
+                / (std * math.sqrt(2 * math.pi))
+                * torch.exp(-(((mgrid - mean) / std) ** 2) / 2)
+            )
 
         # Make sure sum of values in gaussian kernel equals 1.
         kernel = kernel / torch.sum(kernel)
@@ -485,8 +470,8 @@ class GaussianSmoothing(nn.Module):
         kernel = kernel.view(1, 1, *kernel.size())
         kernel = kernel.repeat(channels, *[1] * (kernel.dim() - 1))
 
-        print(f'GaussianSmoothing: {kernel.shape}')
-        self.register_buffer('weight', kernel)
+        print(f"GaussianSmoothing: {kernel.shape}")
+        self.register_buffer("weight", kernel)
         self.groups = channels
 
         if dim == 1:
@@ -497,7 +482,7 @@ class GaussianSmoothing(nn.Module):
             self.conv = F.conv3d
         else:
             raise RuntimeError(
-                'Only 1, 2 and 3 dimensions are supported. Received {}.'.format(dim)
+                "Only 1, 2 and 3 dimensions are supported. Received {}.".format(dim)
             )
 
     def forward(self, input):
@@ -520,7 +505,7 @@ class NoiseResnetGenerator(nn.Module):
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
         n_blocks=6,
-        padding_type='reflect'
+        padding_type="reflect",
     ):
         super(NoiseResnetGenerator, self).__init__()
         sz, sy, sx = output_shape
@@ -528,44 +513,63 @@ class NoiseResnetGenerator(nn.Module):
         self.Nb1 = NoiseBlock(16, -1, 32, (sz // 8, sy // 32, sx // 32), 16)
         # Nb1 (B, 16, 4, 4, 4)
         Trans1 = [
-            nn.ConvTranspose3d(16, 16, kernel_size=3, stride=2, padding=1,
-                               output_padding=1, bias=True),
+            nn.ConvTranspose3d(
+                16, 16, kernel_size=3, stride=2, padding=1, output_padding=1, bias=True
+            ),
             norm_layer(16),
             nn.ReLU(True),
-            nn.ConvTranspose3d(16, 8, kernel_size=3, stride=2, padding=1, 
-                               output_padding=1, bias=True),
+            nn.ConvTranspose3d(
+                16, 8, kernel_size=3, stride=2, padding=1, output_padding=1, bias=True
+            ),
             norm_layer(8),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         self.Trans1 = nn.Sequential(*Trans1)
         # Trans1, (B, 8, 16,16,16),
         # self.Nb2 = NoiseBlock(32,8,32,(16,16,16),8)
         self.Nb2 = NoiseBlock(32, 8, 32, (sz // 2, sy // 8, sx // 8), 8)
         Trans2_1 = [
-            nn.ConvTranspose3d(8, 8, kernel_size=3, stride=2, padding=1,
-                               output_padding=1, bias=True),
+            nn.ConvTranspose3d(
+                8, 8, kernel_size=3, stride=2, padding=1, output_padding=1, bias=True
+            ),
             norm_layer(8),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         self.Trans2_1 = nn.Sequential(*Trans2_1)
         Trans2_2 = [
-            nn.ConvTranspose3d(8, 8, kernel_size=(1, 3, 3), stride=(1, 2, 2), 
-                               padding=(0, 1, 1), output_padding=(0, 1, 1), bias=True),
+            nn.ConvTranspose3d(
+                8,
+                8,
+                kernel_size=(1, 3, 3),
+                stride=(1, 2, 2),
+                padding=(0, 1, 1),
+                output_padding=(0, 1, 1),
+                bias=True,
+            ),
             norm_layer(8),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         self.Trans2_2 = nn.Sequential(*Trans2_2)
         # self.Nb3 = NoiseBlock(48,8,32,(32,64,64),4)
         self.Nb3 = NoiseBlock(48, 8, 32, (sz, sy // 2, sx // 2), 4)
         Trans3 = [
-            nn.ConvTranspose3d(4, 4, kernel_size=(1, 3, 3), stride=(1, 2, 2), 
-                               padding=(0, 1, 1), output_padding=(0, 1, 1), bias=True),
+            nn.ConvTranspose3d(
+                4,
+                4,
+                kernel_size=(1, 3, 3),
+                stride=(1, 2, 2),
+                padding=(0, 1, 1),
+                output_padding=(0, 1, 1),
+                bias=True,
+            ),
             norm_layer(4),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         self.Trans3 = nn.Sequential(*Trans3)
         self.Nb4 = NoiseBlock(48, 4, 32, (sz, sy, sx), 1)
-        Trans4 = [nn.Tanh(), ]
+        Trans4 = [
+            nn.Tanh(),
+        ]
         self.Trans4 = nn.Sequential(*Trans4)
 
     def forward(self, z, mask):
@@ -596,7 +600,7 @@ class NoiseBlock(nn.Module):
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
         n_blocks=6,
-        padding_type='reflect'
+        padding_type="reflect",
     ):
         super(NoiseBlock, self).__init__()
         self.output_shape = output_shape
@@ -605,12 +609,18 @@ class NoiseBlock(nn.Module):
         self.Linear_m = MLP(input_noise_nc, dim1, mid_dim=16, n_blk=3)
 
         Res_m1 = [
-            nn.Conv3d(output_nc + 1, ngf, kernel_size=3, stride=1, padding=1,
-                      bias=True),
+            nn.Conv3d(
+                output_nc + 1, ngf, kernel_size=3, stride=1, padding=1, bias=True
+            ),
             norm_layer(ngf),
             nn.ReLU(True),
-            ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer,
-                        use_dropout=use_dropout, use_bias=True)
+            ResnetBlock(
+                ngf,
+                padding_type=padding_type,
+                norm_layer=norm_layer,
+                use_dropout=use_dropout,
+                use_bias=True,
+            ),
         ]
         self.Res_m1 = nn.Sequential(*Res_m1)
 
@@ -619,26 +629,44 @@ class NoiseBlock(nn.Module):
                 nn.Conv3d(input_nc, ngf, kernel_size=3, stride=1, padding=1, bias=True),
                 norm_layer(ngf),
                 nn.ReLU(True),
-                ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer, 
-                            use_dropout=use_dropout, use_bias=True)
+                ResnetBlock(
+                    ngf,
+                    padding_type=padding_type,
+                    norm_layer=norm_layer,
+                    use_dropout=use_dropout,
+                    use_bias=True,
+                ),
             ]
             self.Res_m2 = nn.Sequential(*Res_m2)
         else:
             self.Res_m2 = None
 
         Res_m3 = [
-            ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer,
-                        use_dropout=use_dropout, use_bias=True),
+            ResnetBlock(
+                ngf,
+                padding_type=padding_type,
+                norm_layer=norm_layer,
+                use_dropout=use_dropout,
+                use_bias=True,
+            ),
             nn.Conv3d(ngf, output_nc, kernel_size=1, stride=1, padding=0, bias=True),
         ]
         self.Res_m3 = nn.Sequential(*Res_m3)
 
     def forward(self, input, z, mask):
         z2 = self.Linear_m(z)
-        z2 = z2.view((-1, self.output_nc, self.output_shape[0], self.output_shape[1],
-                      self.output_shape[2]))
-        mask2 = F.interpolate(mask, size=self.output_shape, mode='trilinear',
-                              align_corners=True)
+        z2 = z2.view(
+            (
+                -1,
+                self.output_nc,
+                self.output_shape[0],
+                self.output_shape[1],
+                self.output_shape[2],
+            )
+        )
+        mask2 = F.interpolate(
+            mask, size=self.output_shape, mode="trilinear", align_corners=True
+        )
         cat2 = torch.cat((z2, mask2), dim=1)
         if torch.is_tensor(input):
             res = self.Res_m1(cat2) + self.Res_m2(input)
@@ -649,7 +677,7 @@ class NoiseBlock(nn.Module):
 
 
 class LinearBlock(nn.Module):
-    def __init__(self, input_dim, output_dim, norm='none', activation='relu'):
+    def __init__(self, input_dim, output_dim, norm="none", activation="relu"):
         super(LinearBlock, self).__init__()
         use_bias = True
         # initialize fully connected layer
@@ -657,25 +685,25 @@ class LinearBlock(nn.Module):
 
         # initialize normalization
         norm_dim = output_dim
-        if norm == 'bn':
+        if norm == "bn":
             self.norm = nn.BatchNorm1d(norm_dim)
-        elif norm == 'in':
+        elif norm == "in":
             self.norm = nn.InstanceNorm1d(norm_dim)
         else:
             assert 0, "Unsupported normalization: {}".format(norm)
 
         # initialize activation
-        if activation == 'relu':
+        if activation == "relu":
             self.activation = nn.ReLU(inplace=True)
-        elif activation == 'lrelu':
+        elif activation == "lrelu":
             self.activation = nn.LeakyReLU(0.2, inplace=True)
-        elif activation == 'prelu':
+        elif activation == "prelu":
             self.activation = nn.PReLU()
-        elif activation == 'selu':
+        elif activation == "selu":
             self.activation = nn.SELU(inplace=True)
-        elif activation == 'tanh':
+        elif activation == "tanh":
             self.activation = nn.Tanh()
-        elif activation == 'none':
+        elif activation == "none":
             self.activation = None
         else:
             assert 0, "Unsupported activation: {}".format(activation)
@@ -691,13 +719,7 @@ class LinearBlock(nn.Module):
 
 class MLP(nn.Module):
     def __init__(
-        self,
-        input_dim,
-        output_dim,
-        mid_dim,
-        n_blk,
-        norm='none',
-        activ='relu'
+        self, input_dim, output_dim, mid_dim, n_blk, norm="none", activ="relu"
     ):
 
         super(MLP, self).__init__()
@@ -707,7 +729,7 @@ class MLP(nn.Module):
         for i in range(n_blk - 2):
             self.model += [LinearBlock(mid_dim, mid_dim, norm=norm, activation=activ)]
         self.model += [
-            LinearBlock(mid_dim, output_dim, norm='none', activation='none')
+            LinearBlock(mid_dim, output_dim, norm="none", activation="none")
         ]  # no output activations
         self.model = nn.Sequential(*self.model)
 
@@ -716,13 +738,7 @@ class MLP(nn.Module):
 
 
 def define_D(
-    input_nc,
-    ndf,
-    netD,
-    n_layers_D=3,
-    norm='batch',
-    init_type='normal',
-    init_gain=0.02
+    input_nc, ndf, netD, n_layers_D=3, norm="batch", init_type="normal", init_gain=0.02
 ):
     """Create a discriminator
 
@@ -730,7 +746,7 @@ def define_D(
         input_nc (int)     -- the number of channels in input images
         ndf (int)          -- the number of filters in the first conv layer
         netD (str)         -- the architecture's name: basic | n_layers | pixel
-        n_layers_D (int)   -- the number of conv layers in the discriminator; 
+        n_layers_D (int)   -- the number of conv layers in the discriminator;
                               effective when netD=='n_layers'
         norm (str)         -- the type of normalization layers used in the network.
         init_type (str)    -- the name of the initialization method.
@@ -745,29 +761,29 @@ def define_D(
         than a full-image discriminator and can work on arbitrarily-sized images
         in a fully convolutional fashion.
 
-        [n_layers]: With this mode, you cna specify the number of conv layers in 
-        the discriminator with the parameter <n_layers_D> (default=3 as used in [basic] 
+        [n_layers]: With this mode, you cna specify the number of conv layers in
+        the discriminator with the parameter <n_layers_D> (default=3 as used in [basic]
         (PatchGAN).)
 
         [pixel]: 1x1 PixelGAN discriminator can classify whether a pixel is real or not.
         It encourages greater color diversity but has no effect on spatial statistics.
 
-    The discriminator has been initialized by <init_net>. It uses Leakly RELU for 
+    The discriminator has been initialized by <init_net>. It uses Leakly RELU for
     non-linearity.
     """
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    if netD == 'basic':  # default PatchGAN classifier
+    if netD == "basic":  # default PatchGAN classifier
         net = NLayerDiscriminator(input_nc, ndf, n_layers=1, norm_layer=norm_layer)
-    elif netD == 'basic433':  # default PatchGAN classifier
+    elif netD == "basic433":  # default PatchGAN classifier
         net = NLayerDiscriminator433(input_nc, ndf, n_layers=1, norm_layer=norm_layer)
-    elif netD == 'n_layers':  # more options
+    elif netD == "n_layers":  # more options
         net = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer)
-    elif netD == 'pixel':     # classify if each pixel is real or fake
+    elif netD == "pixel":  # classify if each pixel is real or fake
         net = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer)
     else:
-        raise NotImplementedError('your discriminator model is not recognized')
+        raise NotImplementedError("your discriminator model is not recognized")
     return init_net(net, init_type, init_gain)
 
 
@@ -782,7 +798,7 @@ class GANLoss(nn.Module):
     """
 
     def __init__(self, gan_mode, target_real_label=1.0, target_fake_label=0.0):
-        """ Initialize the GANLoss class.
+        """Initialize the GANLoss class.
 
         Parameters:
             gan_mode (str) - - the type of GAN objective. It currently supports vanilla,
@@ -794,24 +810,24 @@ class GANLoss(nn.Module):
         LSGAN needs no sigmoid. vanilla GANs will handle it with BCEWithLogitsLoss.
         """
         super(GANLoss, self).__init__()
-        self.register_buffer('real_label', torch.tensor(target_real_label))
-        self.register_buffer('fake_label', torch.tensor(target_fake_label))
+        self.register_buffer("real_label", torch.tensor(target_real_label))
+        self.register_buffer("fake_label", torch.tensor(target_fake_label))
         self.gan_mode = gan_mode
-        if gan_mode == 'lsgan':
+        if gan_mode == "lsgan":
             self.loss = nn.MSELoss()
-        elif gan_mode == 'vanilla':
+        elif gan_mode == "vanilla":
             self.loss = nn.BCEWithLogitsLoss()
-        elif gan_mode in ['wgangp']:
+        elif gan_mode in ["wgangp"]:
             self.loss = None
         else:
-            raise NotImplementedError('gan mode %s not implemented' % gan_mode)
+            raise NotImplementedError("gan mode %s not implemented" % gan_mode)
 
     def get_target_tensor(self, prediction, target_is_real):
         """Create label tensors with the same size as the input.
 
         Parameters:
             prediction (tensor) - - tpyically the prediction from a discriminator
-            target_is_real (bool) - - if the ground truth label is for real images or 
+            target_is_real (bool) - - if the ground truth label is for real images or
                                       fake images
 
         Returns:
@@ -829,16 +845,16 @@ class GANLoss(nn.Module):
 
         Parameters:
             prediction (tensor) - - tpyically the prediction output from a discriminator
-            target_is_real (bool) - - if the ground truth label is for real images or 
+            target_is_real (bool) - - if the ground truth label is for real images or
                                       fake images
 
         Returns:
             the calculated loss.
         """
-        if self.gan_mode in ['lsgan', 'vanilla']:
+        if self.gan_mode in ["lsgan", "vanilla"]:
             target_tensor = self.get_target_tensor(prediction, target_is_real)
             loss = self.loss(prediction, target_tensor)
-        elif self.gan_mode == 'wgangp':
+        elif self.gan_mode == "wgangp":
             if target_is_real:
                 loss = -prediction.mean()
             else:
@@ -847,13 +863,7 @@ class GANLoss(nn.Module):
 
 
 def cal_gradient_penalty(
-    netD,
-    real_data,
-    fake_data,
-    device,
-    type='mixed',
-    constant=1.0,
-    lambda_gp=10.0
+    netD, real_data, fake_data, device, type="mixed", constant=1.0, lambda_gp=10.0
 ):
     """Calculate the gradient penalty loss, used in WGAN-GP paper
         https://arxiv.org/abs/1704.00028
@@ -862,30 +872,33 @@ def cal_gradient_penalty(
         netD (network)              -- discriminator network
         real_data (tensor array)    -- real images
         fake_data (tensor array)    -- generated images from the generator
-        device (str)                -- GPU 
-        type (str)                  -- if we mix real and fake data or not 
+        device (str)                -- GPU
+        type (str)                  -- if we mix real and fake data or not
                                        [real | fake | mixed].
-        constant (float)            -- the constant used in formula 
+        constant (float)            -- the constant used in formula
                                        ( | |gradient||_2 - constant)^2
         lambda_gp (float)           -- weight for this loss
 
     Returns the gradient penalty loss
     """
     if lambda_gp > 0.0:
-        if type == 'real':
+        if type == "real":
             interpolatesv = real_data
-        elif type == 'fake':
+        elif type == "fake":
             interpolatesv = fake_data
-        elif type == 'mixed':
+        elif type == "mixed":
             alpha = torch.rand(real_data.shape[0], 1)
-            alpha = alpha.expand(
-                real_data.shape[0],
-                real_data.nelement() // real_data.shape[0]
-            ).contiguous().view(*real_data.shape)
+            alpha = (
+                alpha.expand(
+                    real_data.shape[0], real_data.nelement() // real_data.shape[0]
+                )
+                .contiguous()
+                .view(*real_data.shape)
+            )
             alpha = alpha.to(device)
             interpolatesv = alpha * real_data + ((1 - alpha) * fake_data)
         else:
-            raise NotImplementedError('{} not implemented'.format(type))
+            raise NotImplementedError("{} not implemented".format(type))
         interpolatesv.requires_grad_(True)
         disc_interpolates = netD(interpolatesv)
         gradients = torch.autograd.grad(
@@ -894,19 +907,19 @@ def cal_gradient_penalty(
             grad_outputs=torch.ones(disc_interpolates.size()).to(device),
             create_graph=True,
             retain_graph=True,
-            only_inputs=True
+            only_inputs=True,
         )
         gradients = gradients[0].view(real_data.size(0), -1)  # flat the data
         gradient_penalty = (
             ((gradients + 1e-16).norm(2, dim=1) - constant) ** 2
-        ).mean() * lambda_gp        # added eps
+        ).mean() * lambda_gp  # added eps
         return gradient_penalty, gradients
     else:
         return 0.0, None
 
 
 class ResnetGenerator(nn.Module):
-    """Resnet-based generator that consists of Resnet blocks between a few 
+    """Resnet-based generator that consists of Resnet blocks between a few
        downsampling/upsampling operations.
 
     We adapt Torch code and idea from Justin Johnson's neural style transfer
@@ -921,7 +934,7 @@ class ResnetGenerator(nn.Module):
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
         n_blocks=6,
-        padding_type='reflect'
+        padding_type="reflect",
     ):
         """Construct a Resnet-based generator
 
@@ -935,7 +948,7 @@ class ResnetGenerator(nn.Module):
             padding_type (str)  -- the name of padding layer in conv layers:
                                     reflect | replicate | zero
         """
-        assert(n_blocks >= 0)
+        assert n_blocks >= 0
         super(ResnetGenerator, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm3d
@@ -943,23 +956,33 @@ class ResnetGenerator(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm3d
 
         # TODO: switch to ReflectionPad3d
-        model = [nn.ReplicationPad3d(3),
-                 nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(ngf),
-                 nn.ReLU(True)]
+        model = [
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
+            norm_layer(ngf),
+            nn.ReLU(True),
+        ]
 
         # self.debug = nn.Sequential(*model)
 
         n_downsampling = 2
         for i in range(n_downsampling):  # add downsampling layers
             mult = 2 ** i
-            model += [nn.Conv3d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2,
-                                padding=1, bias=use_bias),
-                      norm_layer(ngf * mult * 2),
-                      nn.ReLU(True)]
+            model += [
+                nn.Conv3d(
+                    ngf * mult,
+                    ngf * mult * 2,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    bias=use_bias,
+                ),
+                norm_layer(ngf * mult * 2),
+                nn.ReLU(True),
+            ]
 
         mult = 2 ** n_downsampling
-        for i in range(n_blocks):       # add ResNet blocks
+        for i in range(n_blocks):  # add ResNet blocks
 
             model += [
                 ResnetBlock(
@@ -967,18 +990,25 @@ class ResnetGenerator(nn.Module):
                     padding_type=padding_type,
                     norm_layer=norm_layer,
                     use_dropout=use_dropout,
-                    use_bias=use_bias
+                    use_bias=use_bias,
                 )
             ]
 
         for i in range(n_downsampling):  # add upsampling layers
             mult = 2 ** (n_downsampling - i)
-            model += [nn.ConvTranspose3d(ngf * mult, int(ngf * mult / 2),
-                                         kernel_size=3, stride=2,
-                                         padding=1, output_padding=1,
-                                         bias=use_bias),
-                      norm_layer(int(ngf * mult / 2)),
-                      nn.ReLU(True)]
+            model += [
+                nn.ConvTranspose3d(
+                    ngf * mult,
+                    int(ngf * mult / 2),
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1,
+                    bias=use_bias,
+                ),
+                norm_layer(int(ngf * mult / 2)),
+                nn.ReLU(True),
+            ]
         model += [nn.ReplicationPad3d(3)]
         # TODO: switch to ReflectionPad3d
         model += [nn.Conv3d(ngf, output_nc, kernel_size=7, padding=0)]
@@ -993,10 +1023,10 @@ class ResnetGenerator(nn.Module):
 
 
 class ResnetGeneratorCR(nn.Module):
-    """Resnet-based generator that consists of Resnet blocks between a 
+    """Resnet-based generator that consists of Resnet blocks between a
        few downsampling/upsampling operations.
 
-    We adapt Torch code and idea from Justin Johnson's neural style transfer 
+    We adapt Torch code and idea from Justin Johnson's neural style transfer
     project(https://github.com/jcjohnson/fast-neural-style)
     """
 
@@ -1008,7 +1038,7 @@ class ResnetGeneratorCR(nn.Module):
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
         n_blocks=6,
-        padding_type='reflect'
+        padding_type="reflect",
     ):
         """Construct a Resnet-based generator
 
@@ -1019,10 +1049,10 @@ class ResnetGeneratorCR(nn.Module):
             norm_layer          -- normalization layer
             use_dropout (bool)  -- if use dropout layers
             n_blocks (int)      -- the number of ResNet blocks
-            padding_type (str)  -- the name of padding layer in conv layers: 
+            padding_type (str)  -- the name of padding layer in conv layers:
                                    reflect | replicate | zero
         """
-        assert(n_blocks >= 0)
+        assert n_blocks >= 0
         super(ResnetGeneratorCR, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm3d
@@ -1030,23 +1060,33 @@ class ResnetGeneratorCR(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm3d
 
         # TODO: switch to ReflectionPad3d
-        model = [nn.ReplicationPad3d(3),
-                 nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(ngf),
-                 nn.ReLU(True)]
+        model = [
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
+            norm_layer(ngf),
+            nn.ReLU(True),
+        ]
 
         # self.debug = nn.Sequential(*model)
 
         n_downsampling = 2
         for i in range(n_downsampling):  # add downsampling layers
             mult = 2 ** i
-            model += [nn.Conv3d(ngf * mult, ngf * mult * 2, kernel_size=3,
-                                stride=(2, 2, 2), padding=1, bias=use_bias),
-                      norm_layer(ngf * mult * 2),
-                      nn.ReLU(True)]
+            model += [
+                nn.Conv3d(
+                    ngf * mult,
+                    ngf * mult * 2,
+                    kernel_size=3,
+                    stride=(2, 2, 2),
+                    padding=1,
+                    bias=use_bias,
+                ),
+                norm_layer(ngf * mult * 2),
+                nn.ReLU(True),
+            ]
 
         mult = 2 ** n_downsampling
-        for i in range(n_blocks):       # add ResNet blocks
+        for i in range(n_blocks):  # add ResNet blocks
 
             model += [
                 ResnetBlock(
@@ -1054,30 +1094,38 @@ class ResnetGeneratorCR(nn.Module):
                     padding_type=padding_type,
                     norm_layer=norm_layer,
                     use_dropout=use_dropout,
-                    use_bias=use_bias
+                    use_bias=use_bias,
                 )
             ]
 
         for i in range(n_downsampling - 1):  # add upsampling layers
             mult = 2 ** (n_downsampling - i)
-            model += [nn.ConvTranspose3d(ngf * mult, int(ngf * mult / 2),
-                                         kernel_size=3, stride=2,
-                                         padding=1, output_padding=1,
-                                         bias=use_bias),
-                      norm_layer(int(ngf * mult / 2)),
-                      nn.ReLU(True)]
+            model += [
+                nn.ConvTranspose3d(
+                    ngf * mult,
+                    int(ngf * mult / 2),
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1,
+                    bias=use_bias,
+                ),
+                norm_layer(int(ngf * mult / 2)),
+                nn.ReLU(True),
+            ]
         mult = 2
         model += [
             nn.Conv3d(
                 ngf * mult,
                 int(ngf * mult / 2),
-                kernel_size=3, stride=1,
+                kernel_size=3,
+                stride=1,
                 padding=1,
-                bias=use_bias
+                bias=use_bias,
             ),
-            Upsample(scale_factor=2, mode='trilinear', align_corners=True),
+            Upsample(scale_factor=2, mode="trilinear", align_corners=True),
             norm_layer(int(ngf * mult / 2)),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         model += [nn.ReplicationPad3d(3)]
         model += [nn.Conv3d(ngf, output_nc, kernel_size=7, padding=0)]
@@ -1092,10 +1140,10 @@ class ResnetGeneratorCR(nn.Module):
 
 
 class ResnetGeneratorNopad(nn.Module):
-    """Resnet-based generator that consists of Resnet blocks between a few 
+    """Resnet-based generator that consists of Resnet blocks between a few
        downsampling/upsampling operations.
 
-    We adapt Torch code and idea from Justin Johnson's neural style transfer 
+    We adapt Torch code and idea from Justin Johnson's neural style transfer
     project(https://github.com/jcjohnson/fast-neural-style)
     """
 
@@ -1106,7 +1154,7 @@ class ResnetGeneratorNopad(nn.Module):
         ngf=64,
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
-        n_blocks=6
+        n_blocks=6,
     ):
         """Construct a Resnet-based generator
 
@@ -1117,10 +1165,10 @@ class ResnetGeneratorNopad(nn.Module):
             norm_layer          -- normalization layer
             use_dropout (bool)  -- if use dropout layers
             n_blocks (int)      -- the number of ResNet blocks
-            padding_type (str)  -- the name of padding layer in conv layers: 
+            padding_type (str)  -- the name of padding layer in conv layers:
                                     reflect | replicate | zero
         """
-        assert(n_blocks >= 0)
+        assert n_blocks >= 0
         super(ResnetGeneratorNopad, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm3d
@@ -1128,9 +1176,11 @@ class ResnetGeneratorNopad(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm3d
 
         # TODO: switch to ReflectionPad3d
-        model = [nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(ngf),
-                 nn.ReLU(True)]
+        model = [
+            nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
+            norm_layer(ngf),
+            nn.ReLU(True),
+        ]
 
         # self.debug = nn.Sequential(*model)
 
@@ -1144,22 +1194,22 @@ class ResnetGeneratorNopad(nn.Module):
                     kernel_size=3,
                     stride=(1, 2, 2),
                     padding=0,
-                    bias=use_bias
+                    bias=use_bias,
                 ),
                 norm_layer(ngf * mult * 2),
-                nn.ReLU(True)
+                nn.ReLU(True),
             ]
 
         mult = 2 ** n_downsampling
-        for i in range(n_blocks):       # add ResNet blocks
+        for i in range(n_blocks):  # add ResNet blocks
 
             model += [
                 ResnetBlock(
                     ngf * mult,
-                    padding_type='zero',
+                    padding_type="zero",
                     norm_layer=norm_layer,
                     use_dropout=use_dropout,
-                    use_bias=use_bias
+                    use_bias=use_bias,
                 )
             ]
 
@@ -1172,12 +1222,15 @@ class ResnetGeneratorNopad(nn.Module):
                     kernel_size=3,
                     stride=1,
                     padding=0,
-                    bias=use_bias
+                    bias=use_bias,
                 ),
-                Upsample3D(scale_factor=tuple([1.0, 2.0, 2.0]), mode='trilinear',
-                           align_corners=True),
+                Upsample3D(
+                    scale_factor=tuple([1.0, 2.0, 2.0]),
+                    mode="trilinear",
+                    align_corners=True,
+                ),
                 norm_layer(int(ngf * mult / 2)),
-                nn.ReLU(True)
+                nn.ReLU(True),
             ]
         model += [nn.Conv3d(ngf, output_nc, kernel_size=(3, 7, 7), padding=0)]
         model += [nn.Tanh()]
@@ -1202,8 +1255,9 @@ class ResnetBlock(nn.Module):
         Original Resnet paper: https://arxiv.org/pdf/1512.03385.pdf
         """
         super(ResnetBlock, self).__init__()
-        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, 
-                                                use_dropout, use_bias)
+        self.conv_block = self.build_conv_block(
+            dim, padding_type, norm_layer, use_dropout, use_bias
+        )
         self.padding_type = padding_type
 
     def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias):
@@ -1216,52 +1270,46 @@ class ResnetBlock(nn.Module):
             use_dropout (bool)  -- if use dropout layers.
             use_bias (bool)     -- if the conv layer uses bias or not
 
-        Returns a conv block (with a conv layer, a normalization layer, 
+        Returns a conv block (with a conv layer, a normalization layer,
         and a non-linearity layer (ReLU))
         """
         conv_block = []
         p = 0
-        if padding_type == 'reflect':
+        if padding_type == "reflect":
             conv_block += [nn.ReplicationPad3d(1)]
             # TODO: switch to ReflectionPad3d
-        elif padding_type == 'replicate':
+        elif padding_type == "replicate":
             conv_block += [nn.ReplicationPad3d(1)]
-        elif padding_type == 'zero':
+        elif padding_type == "zero":
             p = 1
-        elif padding_type == 'none':
+        elif padding_type == "none":
             p = 0
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError("padding [%s] is not implemented" % padding_type)
 
         conv_block += [
-            nn.Conv3d(
-                dim,
-                dim,
-                kernel_size=3,
-                padding=p,
-                bias=use_bias
-            ),
+            nn.Conv3d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
             norm_layer(dim),
-            nn.ReLU(True)
+            nn.ReLU(True),
         ]
         if use_dropout:
             conv_block += [nn.Dropout(0.5)]
 
         p = 0
-        if padding_type == 'reflect':
+        if padding_type == "reflect":
             conv_block += [nn.ReplicationPad3d(1)]
             # TODO: switch to ReflectionPad3d
-        elif padding_type == 'replicate':
+        elif padding_type == "replicate":
             conv_block += [nn.ReplicationPad3d(1)]
-        elif padding_type == 'zero':
+        elif padding_type == "zero":
             p = 1
-        elif padding_type == 'none':
+        elif padding_type == "none":
             p = 0
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError("padding [%s] is not implemented" % padding_type)
         conv_block += [
             nn.Conv3d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
-            norm_layer(dim)
+            norm_layer(dim),
         ]
 
         return nn.Sequential(*conv_block)
@@ -1269,7 +1317,7 @@ class ResnetBlock(nn.Module):
     def forward(self, x):
         """Forward function (with skip connections)"""
         # print('x',x.shape)
-        if self.padding_type == 'none':
+        if self.padding_type == "none":
             print(x.shape)
             print(self.conv_block(x).shape)
             out = x[:, :, 2:-2, 2:-2, 2:-2] + self.conv_block(x)
@@ -1290,14 +1338,14 @@ class UnetGenerator(nn.Module):
         ngf=64,
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
-        unet_upsampling=True
+        unet_upsampling=True,
     ):
         """Construct a Unet generator
         Parameters:
             input_nc (int)  -- the number of channels in input images
             output_nc (int) -- the number of channels in output images
-            num_downs (int) -- the number of downsamplings in UNet. For example, 
-                                # if |num_downs| == 7, image of size 128x128 will 
+            num_downs (int) -- the number of downsamplings in UNet. For example,
+                                # if |num_downs| == 7, image of size 128x128 will
                                 # become of size 1x1 # at the bottleneck
             ngf (int)       -- the number of filters in the last conv layer
             norm_layer      -- normalization layer
@@ -1313,7 +1361,7 @@ class UnetGenerator(nn.Module):
             input_nc=None,
             submodule=None,
             norm_layer=norm_layer,
-            innermost=True
+            innermost=True,
         )  # add the innermost layer
         for i in range(num_downs - 5):
             unet_block = UnetSkipConnectionBlock(
@@ -1322,29 +1370,17 @@ class UnetGenerator(nn.Module):
                 input_nc=None,
                 submodule=unet_block,
                 norm_layer=norm_layer,
-                use_dropout=use_dropout
+                use_dropout=use_dropout,
             )
         # gradually reduce the number of filters from ngf * 8 to ngf
         unet_block = UnetSkipConnectionBlock(
-            ngf * 4,
-            ngf * 8,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf * 4, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         unet_block = UnetSkipConnectionBlock(
-            ngf * 2,
-            ngf * 4,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf * 2, ngf * 4, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         unet_block = UnetSkipConnectionBlock(
-            ngf,
-            ngf * 2,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         self.model = UnetSkipConnectionBlock(
             output_nc,
@@ -1353,7 +1389,7 @@ class UnetGenerator(nn.Module):
             submodule=unet_block,
             outermost=True,
             norm_layer=norm_layer,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )  # add the outermost layer
 
     def forward(self, input):
@@ -1372,14 +1408,14 @@ class UnetGeneratorNopad(nn.Module):
         ngf=64,
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
-        unet_upsampling=True
+        unet_upsampling=True,
     ):
         """Construct a Unet generator
         Parameters:
             input_nc (int)  -- the number of channels in input images
             output_nc (int) -- the number of channels in output images
-            num_downs (int) -- the number of downsamplings in UNet. For example, 
-                                # if |num_downs| == 7, image of size 128x128 will 
+            num_downs (int) -- the number of downsamplings in UNet. For example,
+                                # if |num_downs| == 7, image of size 128x128 will
                                 # become of size 1x1 # at the bottleneck
             ngf (int)       -- the number of filters in the last conv layer
             norm_layer      -- normalization layer
@@ -1396,7 +1432,7 @@ class UnetGeneratorNopad(nn.Module):
             input_nc=None,
             submodule=None,
             norm_layer=norm_layer,
-            innermost=True
+            innermost=True,
         )  # add the innermost layer
         for i in range(num_downs - 5):
             unet_block = UnetSkipConnectionBlockNopad(
@@ -1406,29 +1442,17 @@ class UnetGeneratorNopad(nn.Module):
                 submodule=unet_block,
                 norm_layer=norm_layer,
                 use_dropout=use_dropout,
-                downsampling=False
+                downsampling=False,
             )
         # gradually reduce the number of filters from ngf * 8 to ngf
         unet_block = UnetSkipConnectionBlockNopad(
-            ngf * 4,
-            ngf * 8,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf * 4, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         unet_block = UnetSkipConnectionBlockNopad(
-            ngf * 2,
-            ngf * 4,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf * 2, ngf * 4, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         unet_block = UnetSkipConnectionBlockNopad(
-            ngf,
-            ngf * 2,
-            input_nc=None,
-            submodule=unet_block,
-            norm_layer=norm_layer
+            ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer
         )
         self.model = UnetSkipConnectionBlockNopad(
             output_nc,
@@ -1437,7 +1461,7 @@ class UnetGeneratorNopad(nn.Module):
             submodule=unet_block,
             outermost=True,
             norm_layer=norm_layer,
-            unet_upsampling=unet_upsampling
+            unet_upsampling=unet_upsampling,
         )  # add the outermost layer
 
     def forward(self, input):
@@ -1447,8 +1471,9 @@ class UnetGeneratorNopad(nn.Module):
 
 # https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/upsampling.py
 class Upsample3D(nn.Module):
-    def __init__(self, size=None, scale_factor=None, mode='nearest', 
-                 align_corners=None):
+    def __init__(
+        self, size=None, scale_factor=None, mode="nearest", align_corners=None
+    ):
         super(Upsample3D, self).__init__()
         self.name = type(self).__name__
         self.size = size
@@ -1461,22 +1486,23 @@ class Upsample3D(nn.Module):
 
     # @weak_script_method
     def forward(self, input):
-        return F.interpolate(input, self.size, self.scale_factor, self.mode,
-                             self.align_corners)
+        return F.interpolate(
+            input, self.size, self.scale_factor, self.mode, self.align_corners
+        )
 
     def extra_repr(self):
         if self.scale_factor is not None:
-            info = 'scale_factor=' + str(self.scale_factor)
+            info = "scale_factor=" + str(self.scale_factor)
         else:
-            info = 'size=' + str(self.size)
-        info += ', mode=' + self.mode
+            info = "size=" + str(self.size)
+        info += ", mode=" + self.mode
         return info
 
 
 class UnetSkipConnectionBlock(nn.Module):
     """Defines the Unet submodule with skip connection.
-        X -------------------identity----------------------
-        |-- downsampling -- |submodule| -- upsampling --|
+    X -------------------identity----------------------
+    |-- downsampling -- |submodule| -- upsampling --|
     """
 
     def __init__(
@@ -1489,7 +1515,7 @@ class UnetSkipConnectionBlock(nn.Module):
         innermost=False,
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
-        unet_upsampling=True
+        unet_upsampling=True,
     ):
         """Construct a Unet submodule with skip connections.
 
@@ -1511,8 +1537,14 @@ class UnetSkipConnectionBlock(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm3d
         if input_nc is None:
             input_nc = outer_nc
-        downconv = nn.Conv3d(input_nc, inner_nc, kernel_size=(3, 4, 4),
-                             stride=(1, 2, 2), padding=(1, 1, 1), bias=use_bias)
+        downconv = nn.Conv3d(
+            input_nc,
+            inner_nc,
+            kernel_size=(3, 4, 4),
+            stride=(1, 2, 2),
+            padding=(1, 1, 1),
+            bias=use_bias,
+        )
         downrelu = nn.LeakyReLU(0.2, True)
         downnorm = norm_layer(inner_nc)
         uprelu = nn.ReLU(True)
@@ -1524,33 +1556,58 @@ class UnetSkipConnectionBlock(nn.Module):
             #                             padding=1)
             if unet_upsampling:
                 upconv = [
-                    nn.Conv3d(inner_nc * 2, inner_nc, kernel_size=3, stride=1,
-                              padding=1, bias=True),
-                    Upsample3D(scale_factor=tuple([1.0, 2.0, 2.0]), mode='trilinear',
-                               align_corners=True),
+                    nn.Conv3d(
+                        inner_nc * 2,
+                        inner_nc,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        bias=True,
+                    ),
+                    Upsample3D(
+                        scale_factor=tuple([1.0, 2.0, 2.0]),
+                        mode="trilinear",
+                        align_corners=True,
+                    ),
                     norm_layer(inner_nc),
                     nn.ReLU(True),
-                    nn.Conv3d(inner_nc, outer_nc, kernel_size=1, padding=0)
+                    nn.Conv3d(inner_nc, outer_nc, kernel_size=1, padding=0),
                 ]
             else:
-                upconv = [nn.ConvTranspose3d(inner_nc * 2, outer_nc,
-                                             kernel_size=(3, 4, 4), stride=(1, 2, 2),
-                                             padding=(1, 1, 1))]
+                upconv = [
+                    nn.ConvTranspose3d(
+                        inner_nc * 2,
+                        outer_nc,
+                        kernel_size=(3, 4, 4),
+                        stride=(1, 2, 2),
+                        padding=(1, 1, 1),
+                    )
+                ]
 
             up = [uprelu] + upconv + [nn.Tanh()]
             down = [downconv]
             model = down + [submodule] + up
         elif innermost:
-            upconv = nn.ConvTranspose3d(inner_nc, outer_nc,
-                                        kernel_size=(3, 4, 4), stride=(1, 2, 2),
-                                        padding=(1, 1, 1), bias=use_bias)
+            upconv = nn.ConvTranspose3d(
+                inner_nc,
+                outer_nc,
+                kernel_size=(3, 4, 4),
+                stride=(1, 2, 2),
+                padding=(1, 1, 1),
+                bias=use_bias,
+            )
             down = [downrelu, downconv]
             up = [uprelu, upconv, upnorm]
             model = down + up
         else:
-            upconv = nn.ConvTranspose3d(inner_nc * 2, outer_nc,
-                                        kernel_size=(3, 4, 4), stride=(1, 2, 2),
-                                        padding=(1, 1, 1), bias=use_bias)
+            upconv = nn.ConvTranspose3d(
+                inner_nc * 2,
+                outer_nc,
+                kernel_size=(3, 4, 4),
+                stride=(1, 2, 2),
+                padding=(1, 1, 1),
+                bias=use_bias,
+            )
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
 
@@ -1564,14 +1621,14 @@ class UnetSkipConnectionBlock(nn.Module):
     def forward(self, x):
         if self.outermost:
             return self.model(x)
-        else:   # add skip connections
+        else:  # add skip connections
             return torch.cat([x, self.model(x)], 1)
 
 
 class UnetSkipConnectionBlockNopad(nn.Module):
     """Defines the Unet submodule with skip connection.
-        X -------------------identity----------------------
-        |-- downsampling -- |submodule| -- upsampling --|
+    X -------------------identity----------------------
+    |-- downsampling -- |submodule| -- upsampling --|
     """
 
     def __init__(
@@ -1585,7 +1642,7 @@ class UnetSkipConnectionBlockNopad(nn.Module):
         norm_layer=nn.BatchNorm3d,
         use_dropout=False,
         unet_upsampling=True,
-        downsampling=True
+        downsampling=True,
     ):
         """Construct a Unet submodule with skip connections.
 
@@ -1607,8 +1664,14 @@ class UnetSkipConnectionBlockNopad(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm3d
         if input_nc is None:
             input_nc = outer_nc
-        downconv = nn.Conv3d(input_nc, inner_nc, kernel_size=(3, 4, 4),
-                             stride=(1, 2, 2), padding=0, bias=use_bias)
+        downconv = nn.Conv3d(
+            input_nc,
+            inner_nc,
+            kernel_size=(3, 4, 4),
+            stride=(1, 2, 2),
+            padding=0,
+            bias=use_bias,
+        )
         downrelu = nn.LeakyReLU(0.2, True)
         downnorm = norm_layer(inner_nc)
         uprelu = nn.ReLU(True)
@@ -1620,34 +1683,58 @@ class UnetSkipConnectionBlockNopad(nn.Module):
             #                             padding=1)
             if unet_upsampling:
                 upconv = [
-                    nn.Conv3d(inner_nc * 2, inner_nc, kernel_size=3, stride=1,
-                              padding=0, bias=True),
-                    Upsample3D(scale_factor=tuple([1.0, 2.0, 2.0]), mode='trilinear',
-                               align_corners=True),
+                    nn.Conv3d(
+                        inner_nc * 2,
+                        inner_nc,
+                        kernel_size=3,
+                        stride=1,
+                        padding=0,
+                        bias=True,
+                    ),
+                    Upsample3D(
+                        scale_factor=tuple([1.0, 2.0, 2.0]),
+                        mode="trilinear",
+                        align_corners=True,
+                    ),
                     norm_layer(inner_nc),
                     nn.ReLU(True),
-                    nn.Conv3d(inner_nc, outer_nc, kernel_size=1, padding=0)
+                    nn.Conv3d(inner_nc, outer_nc, kernel_size=1, padding=0),
                 ]
             else:
                 upconv = [
-                    nn.ConvTranspose3d(inner_nc * 2, outer_nc, kernel_size=(3, 4, 4),
-                                       stride=(1, 2, 2), padding=0)
+                    nn.ConvTranspose3d(
+                        inner_nc * 2,
+                        outer_nc,
+                        kernel_size=(3, 4, 4),
+                        stride=(1, 2, 2),
+                        padding=0,
+                    )
                 ]
 
             up = [uprelu] + upconv + [nn.Tanh()]
             down = [downconv]
             model = down + [submodule] + up
         elif innermost:
-            upconv = nn.ConvTranspose3d(inner_nc, outer_nc,
-                                        kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                                        padding=0, bias=use_bias)
+            upconv = nn.ConvTranspose3d(
+                inner_nc,
+                outer_nc,
+                kernel_size=(3, 3, 3),
+                stride=(1, 1, 1),
+                padding=0,
+                bias=use_bias,
+            )
             down = [downrelu, downconv]
             up = [uprelu, upconv, upnorm]
             model = down + up
         elif downsampling:
-            upconv = nn.ConvTranspose3d(inner_nc * 2, outer_nc,
-                                        kernel_size=(3, 4, 4), stride=(1, 2, 2),
-                                        padding=0, bias=use_bias)
+            upconv = nn.ConvTranspose3d(
+                inner_nc * 2,
+                outer_nc,
+                kernel_size=(3, 4, 4),
+                stride=(1, 2, 2),
+                padding=0,
+                bias=use_bias,
+            )
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
 
@@ -1656,9 +1743,14 @@ class UnetSkipConnectionBlockNopad(nn.Module):
             else:
                 model = down + [submodule] + up
         else:
-            upconv = nn.ConvTranspose3d(inner_nc * 2, outer_nc,
-                                        kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                                        padding=0, bias=use_bias)
+            upconv = nn.ConvTranspose3d(
+                inner_nc * 2,
+                outer_nc,
+                kernel_size=(3, 3, 3),
+                stride=(1, 1, 1),
+                padding=0,
+                bias=use_bias,
+            )
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
             model = down + [submodule] + up
@@ -1668,7 +1760,7 @@ class UnetSkipConnectionBlockNopad(nn.Module):
     def forward(self, x):
         if self.outermost:
             return self.model(x)
-        else:   # add skip connections
+        else:  # add skip connections
             out = self.model(x)
             in_z, in_y, in_x = x.shape[2:]
             out_z, out_y, out_x = out.shape[2:]
@@ -1694,7 +1786,7 @@ class NLayerDiscriminator(nn.Module):
             norm_layer      -- normalization layer
         """
         super(NLayerDiscriminator, self).__init__()
-        if type(norm_layer) == functools.partial: 
+        if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func != nn.BatchNorm3d
         else:
             use_bias = norm_layer != nn.BatchNorm3d
@@ -1703,7 +1795,7 @@ class NLayerDiscriminator(nn.Module):
         padw = 1
         sequence = [
             nn.Conv3d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
         nf_mult = 1
         nf_mult_prev = 1
@@ -1711,19 +1803,31 @@ class NLayerDiscriminator(nn.Module):
             nf_mult_prev = nf_mult
             nf_mult = min(2 ** n, 8)
             sequence += [
-                nn.Conv3d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=2,
-                          padding=padw, bias=use_bias),
+                nn.Conv3d(
+                    ndf * nf_mult_prev,
+                    ndf * nf_mult,
+                    kernel_size=kw,
+                    stride=2,
+                    padding=padw,
+                    bias=use_bias,
+                ),
                 norm_layer(ndf * nf_mult),
-                nn.LeakyReLU(0.2, True)
+                nn.LeakyReLU(0.2, True),
             ]
 
         nf_mult_prev = nf_mult
         nf_mult = min(2 ** n_layers, 8)
         sequence += [
-            nn.Conv3d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1, 
-                      padding=padw, bias=use_bias),
+            nn.Conv3d(
+                ndf * nf_mult_prev,
+                ndf * nf_mult,
+                kernel_size=kw,
+                stride=1,
+                padding=padw,
+                bias=use_bias,
+            ),
             norm_layer(ndf * nf_mult),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
 
         sequence += [
@@ -1758,7 +1862,7 @@ class NLayerDiscriminator433(nn.Module):
         padw = 1
         sequence = [
             nn.Conv3d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
         nf_mult = 1
         nf_mult_prev = 1
@@ -1766,19 +1870,31 @@ class NLayerDiscriminator433(nn.Module):
             nf_mult_prev = nf_mult
             nf_mult = min(2 ** n, 8)
             sequence += [
-                nn.Conv3d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=2,
-                          padding=padw, bias=use_bias),
+                nn.Conv3d(
+                    ndf * nf_mult_prev,
+                    ndf * nf_mult,
+                    kernel_size=kw,
+                    stride=2,
+                    padding=padw,
+                    bias=use_bias,
+                ),
                 norm_layer(ndf * nf_mult),
-                nn.LeakyReLU(0.2, True)
+                nn.LeakyReLU(0.2, True),
             ]
 
         nf_mult_prev = nf_mult
         nf_mult = min(2 ** n_layers, 8)
         sequence += [
-            nn.Conv3d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1,
-                      padding=padw, bias=use_bias),
+            nn.Conv3d(
+                ndf * nf_mult_prev,
+                ndf * nf_mult,
+                kernel_size=kw,
+                stride=1,
+                padding=padw,
+                bias=use_bias,
+            ),
             norm_layer(ndf * nf_mult),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         ]
 
         sequence += [
@@ -1814,7 +1930,8 @@ class PixelDiscriminator(nn.Module):
             nn.Conv3d(ndf, ndf * 2, kernel_size=1, stride=1, padding=0, bias=use_bias),
             norm_layer(ndf * 2),
             nn.LeakyReLU(0.2, True),
-            nn.Conv3d(ndf * 2, 1, kernel_size=1, stride=1, padding=0, bias=use_bias)]
+            nn.Conv3d(ndf * 2, 1, kernel_size=1, stride=1, padding=0, bias=use_bias),
+        ]
 
         self.net = nn.Sequential(*self.net)
 

@@ -17,15 +17,16 @@ def save_tensor(name, data):
 
 
 def get_filenames(p1, p2=None):
-    all1 = sorted(glob(p1 + '*.tiff') + glob(p1 + '*.tif'))
+    all1 = sorted(glob(p1 + "*.tiff") + glob(p1 + "*.tif"))
 
     if p2 is not None:
-        all2 = sorted(glob(p2 + '*.tiff') + glob(p2 + '*.tif'))
+        all2 = sorted(glob(p2 + "*.tiff") + glob(p2 + "*.tif"))
         assert len(all1) == len(all2), "different number of source and target images"
 
         for i in range(len(all1)):
-            assert os.path.basename(all1[i]) == os.path.basename(all2[i]), \
-                f"Filename mismatch: {all1[i]}, {all2[i]}"
+            assert os.path.basename(all1[i]) == os.path.basename(
+                all2[i]
+            ), f"Filename mismatch: {all1[i]}, {all2[i]}"
         return all1, all2
     else:
         return all1

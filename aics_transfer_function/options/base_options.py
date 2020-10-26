@@ -7,10 +7,11 @@ import git
 from munch import Munch
 
 
-class BaseOptions():
+class BaseOptions:
     """
     This class defines options used during both training and test time.
     """
+
     def __init__(self, config_file, running_mode):
         self.running_mode = running_mode
         self.config_file = config_file
@@ -27,17 +28,17 @@ class BaseOptions():
         Returns
         -----------
         fullname: str
-            the full job name in the format of 
+            the full job name in the format of
             jobname_gitSHA_time
         """
 
         now = datetime.datetime.now()
         time = now.strftime("%m%d_%H%M")
-        try:            
+        try:
             repo = git.Repo(search_parent_directories=True)
             gitsha = (repo.head.object.hexsha)[-4:]
         except Exception:
-            gitsha = 'NoGitSHA'
+            gitsha = "NoGitSHA"
 
         fullname = f"{name}_{gitsha}_{time}"
         return fullname
@@ -46,10 +47,10 @@ class BaseOptions():
         """
         Print options
         """
-        message = '\n----------------- Options ---------------\n'
+        message = "\n----------------- Options ---------------\n"
         for k, v in sorted(vars(opt).items()):
             message += f"{str(k)}: {str(v)}\n"
-        message += '\n----------------- End -------------------\n'
+        message += "\n----------------- End -------------------\n"
         print(message)
 
     def parse(self):
@@ -57,14 +58,14 @@ class BaseOptions():
         parse the option arguments and fill with default values when missing
         """
 
-        with open(self.config_file, 'r') as stream:
+        with open(self.config_file, "r") as stream:
             opt_dict = yaml.load(stream)
 
         # convert dictionary to attribute-like object
         opt = Munch(opt_dict)
 
         # load and validation training config
-        if self.running_mode.lower() == 'train':
+        if self.running_mode.lower() == "train":
             opt.isTrain = True
 
             # create a unique job name for this run
@@ -86,12 +87,12 @@ class BaseOptions():
             opt.training_setting["train_num"] = -1
 
             # TODO: check AA code
-            opt.offsetlogpath = opt.resultroot / Path('offsets.log') 
+            opt.offsetlogpath = opt.resultroot / Path("offsets.log")
 
-            # determine how to resize source image    
-            opt.resizeA = 'toB'
+            # determine how to resize source image
+            opt.resizeA = "toB"
 
-        elif self.running_mode.lower() == 'validation':
+        elif self.running_mode.lower() == "validation":
             opt.isTrain = False
 
             # check output folder exists
@@ -102,10 +103,10 @@ class BaseOptions():
             # copy the config file into the prediction directory
             shutil.copy(self.config_file, opt.output_path)
 
-            # determine how to resize source image    
-            opt.resizeA = 'toB'
+            # determine how to resize source image
+            opt.resizeA = "toB"
 
-        elif self.running_mode.lower() == 'inference':
+        elif self.running_mode.lower() == "inference":
             opt.isTrain = False
 
             # check output folder exists
@@ -116,8 +117,8 @@ class BaseOptions():
             # copy the config file into the prediction directory
             shutil.copy(self.config_file, opt.output_path)
 
-            # determine how to resize source image 
-            opt.resizeA = 'ratio'
+            # determine how to resize source image
+            opt.resizeA = "ratio"
 
         else:
             raise NotImplementedError("mode name errir")

@@ -11,7 +11,7 @@ def simple_norm(
     bulk_params: Optional[
         Tuple[str, float, float, Optional[float], Optional[float]]
     ] = None,
-    inplace: bool = False
+    inplace: bool = False,
 ):
     if not inplace:
         struct_img = np.copy(struct_img0)
@@ -32,8 +32,9 @@ def simple_norm(
         from skimage.filters import threshold_otsu
 
         # do otsu thresholding
-        img_smooth = gaussian_filter(struct_img.astype(np.float32),
-                                     sigma=1.0, mode='nearest', truncate=3.0)
+        img_smooth = gaussian_filter(
+            struct_img.astype(np.float32), sigma=1.0, mode="nearest", truncate=3.0
+        )
         img_bw = img_smooth > threshold_otsu(img_smooth)
 
         # find the middle body chunk
@@ -48,7 +49,7 @@ def simple_norm(
         for zz in range(struct_img.shape[0]):
             if np.count_nonzero(img_bw[struct_img.shape[0] - zz - 1, :, :] > 0) > 50:
                 if zz > 0:
-                    high_chunk = struct_img.shape[0] - zz 
+                    high_chunk = struct_img.shape[0] - zz
                 break
 
         structure_img0 = struct_img[low_chunk:high_chunk, :, :]
@@ -57,8 +58,9 @@ def simple_norm(
         m = np.mean(structure_img0)
         s = np.std(structure_img0)
 
-    elif stat_method == 'full':
+    elif stat_method == "full":
         from scipy.stats import norm
+
         m, s = norm.fit(struct_img.flat)
 
     else:
@@ -76,4 +78,4 @@ def simple_norm(
     struct_img = struct_img * out_range_span + out_range[0]
 
     if not inplace:
-        return struct_img.astype('float32') 
+        return struct_img.astype("float32")
