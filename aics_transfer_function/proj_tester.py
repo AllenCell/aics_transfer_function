@@ -91,27 +91,29 @@ class ProjectTester(object):
 
         for fileA in filenamesA:
             dataset.load_from_file([fileA, ])
-            positionA = dataset.positionA
-            rA = np.zeros(positionA[0]).astype('float32')
+            position = dataset.positionA
+            rA = np.zeros(position[0]).astype('float32')
+            fB = np.zeros(position[0]).astype('float32')
+            rB = np.zeros(position[0]).astype('float32')
 
-            """
             for i, data in enumerate(dataset):
                 self.model.set_input(data)  # unpack data from data loader
 
-                if self.opt.network["model"] == 'pix2pix':
+                if self.opt.network["model"] == 'pix2pix':      
                     rA_i, rB_i, fB_i = self.model.test()
-                    arrange(self.opt, rA_i, rA, positionA[i + 1])
+                    arrange(self.opt, rA_i, rA, position[i + 1])
+                    arrange(self.opt, rB_i, rB, position[i + 1])
+                    arrange(self.opt, fB_i, fB, position[i + 1])
                 elif self.opt.network["model"] == 'stn':  # TODO: check AA code
                     rA_i, rB_i, fB0_i, fB_i = self.model.test()
-                    arrange(self.opt, rA_i, rA, positionA[i + 1])
-            """
+                    arrange(self.opt, rA_i, rA, position[i + 1])
+                    arrange(self.opt, fB_i, fB, position[i + 1]) 
 
             ###########################################################################
             # Temp saving script
             filename_ori = extract_filename(fileA, replace=True, old_name='source.tif',
                                             rep_name='pred.tiff')
-            tif = tifffile.TiffWriter(self.opt.output_path + "/" + filename_ori,
-                                      bigtiff=True)
+            tif = tifffile.TiffWriter(self.opt.output_path / filename_ori, bigtiff=True)
             tif.save(fB, compress=9, photometric='minisblack', metadata=None)
             tif.close()
             print(filename_ori + " saved")
@@ -134,7 +136,7 @@ class ProjectTester(object):
             fB = np.zeros(position[0]).astype('float32')
             fB0 = np.zeros(position[0]).astype('float32')
 
-            print(position)
+            # print(position)
             for i, data in enumerate(dataset):
                 self.model.set_input(data)  # unpack data from data loader
 

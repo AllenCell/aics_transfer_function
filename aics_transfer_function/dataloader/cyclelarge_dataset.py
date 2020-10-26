@@ -46,7 +46,7 @@ class cyclelargeDataset(Dataset):
         func_name_src = self.opt['normalization']['source']['method']
         self.source_norm = getattr(norm_module, func_name_src)
         self.source_norm_param = self.opt['normalization']['source']['params']
-        if "target" in self.opt.datapath:
+        if "target" in self.opt.datapath and self.opt.datapath['target'] is not None:
             func_name_tar = self.opt['normalization']['target']['method']
             self.target_norm = getattr(norm_module, func_name_tar)
             self.target_norm_param = self.opt['normalization']['target']['params']
@@ -159,10 +159,10 @@ class cyclelargeDataset(Dataset):
                 new_size = (tar_img.shape[0], tar_img.shape[1], tar_img.shape[2])
 
             else:
-                # TODO: check this parameter: self.opt.ratio_param
-                nz = int(np.round(src_img.shape[0] * self.opt.ratio_param(0)))
-                ny = int(np.round(src_img.shape[1] * self.opt.ratio_param(1)))
-                nx = int(np.round(src_img.shape[2] * self.opt.ratio_param(2)))
+                r = self.opt.normalization["source"]["ratio_param"]
+                nz = int(np.round(src_img.shape[0] * r[0]))
+                ny = int(np.round(src_img.shape[1] * r[1]))
+                nx = int(np.round(src_img.shape[2] * r[2]))
                 new_size = (nz, ny, nx)
 
             src_img = resize_to(src_img, new_size, method='bilinear')
@@ -365,28 +365,37 @@ class cyclelargeDataset(Dataset):
         return fdict
 
     def __getitem__(self, index):
+        # TODO: use dataloader
         assert self.filenamesA is not None, 'please load_from_file first'
         idxA = index * self.batch_size
         if idxA + self.batch_size > len(self.imgA):
             raise IndexError('end of one epoch')
-        if self.aligned:
-            idxB = np.array(range(idxA, idxA + self.batch_size)).tolist()
-        else:
-            idxB = np.random.randint(0, len(self.imgB), self.batch_size).tolist()
         image_tensorA = from_numpy(
             np.array(self.imgA[idxA:idxA + self.batch_size]).astype(float)
         )
-        image_tensorB = from_numpy(
-            np.array([self.imgB[idx] for idx in idxB]).astype(float)
-        )
-        # TODO: use dataloader
-        return {'A': image_tensorA.float(), 
-                'B': image_tensorB.float(),
-                'A_paths': self.imgA_path[idxA],
-                'B_paths': [self.imgB_path[idx] for idx in idxB][0],
-                'calcAveOffset': self.for_calc_ave_offset[idxA],
-                'A_short_path': self.imgA_short_path[idxA]
-                }  # not support batch_size > 1
+
+        if self.filenamesB is not None:
+            if self.aligned:
+                idxB = np.array(range(idxA, idxA + self.batch_size)).tolist()
+            else:
+                idxB = np.random.randint(0, len(self.imgB), self.batch_size).tolist()
+            image_tensorB = from_numpy(
+                np.array([self.imgB[idx] for idx in idxB]).astype(float)
+            )
+            pathB = [self.imgB_path[idx] for idx in idxB][0]
+        else:
+            # HACK: need better implementation
+            image_tensorB = image_tensorA
+            pathB = self.imgA_path[idxA]
+
+        return {
+            'A': image_tensorA.float(), 
+            'B': image_tensorB.float(),
+            'A_paths': self.imgA_path[idxA],
+            'B_paths': pathB,
+            'calcAveOffset': self.for_calc_ave_offset[idxA],
+            'A_short_path': self.imgA_short_path[idxA]
+        }  # not support batch_size > 1
 
     def __len__(self):
         return len(self.imgA)
