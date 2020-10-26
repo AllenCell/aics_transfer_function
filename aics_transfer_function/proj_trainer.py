@@ -66,10 +66,7 @@ class ProjectTrainer(object):
         """
         print("running a little setup before full training starts ...")
         # creat dataset class
-        if "nopad" in self.opt.network["netG"]:
-            dataset = cyclelargenopadDataset(self.opt)
-        else:
-            dataset = cyclelargeDataset(self.opt)
+        dataset = cyclelargeDataset(self.opt)
         self.opt.size_out = dataset.get_size_out()
         self.opt.up_scale = dataset.get_up_scale()
 

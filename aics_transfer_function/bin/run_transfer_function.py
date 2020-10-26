@@ -68,7 +68,7 @@ def main():
         dbg = args.debug
 
         # check gpu option
-        assert torch.cuda.is_available(), f"GPU is not available."
+        assert torch.cuda.is_available(), "GPU is not available."
         torch.cuda.set_device(torch.device("cuda:0"))
 
         if args.mode == TRAIN_MODE or args.mode.lower() == TRAIN_MODE:
