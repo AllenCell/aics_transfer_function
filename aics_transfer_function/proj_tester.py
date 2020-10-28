@@ -86,22 +86,26 @@ class ProjectTester(object):
         self.model = model
 
     def run_inference(self, single_test_image: str = None, normalized: bool = False):
-        """ 
+        """
         Main inference function, four different options are supported:
         - use config only, specify one filename in "source"
         - use config only, specify one folder in "source", all ".tif" and ".tiff"
           in the folder will be processed
         - pass in "single_test_image" as a filename
         - pass in "single_test_image" as a numpy array. If "normalized" is True
-          the image will be directly processed, otherwise, the image will be 
-          normalized first using the normalization method in config. Default is 
+          the image will be directly processed, otherwise, the image will be
+          normalized first using the normalization method in config. Default is
           "normalized" = False
         """
 
         if single_test_image is not None:
-            filenamesA = [single_test_image, ]
+            filenamesA = [
+                single_test_image,
+            ]
         elif os.path.isfile(self.opt.datapath["source"]):
-            filenamesA = [self.opt.datapath["source"], ]
+            filenamesA = [
+                self.opt.datapath["source"],
+            ]
         else:
             filenamesA = get_filenames(self.opt.datapath["source"])
         dataset = cyclelargeDataset(self.opt, aligned=True)
@@ -111,7 +115,7 @@ class ProjectTester(object):
         for fileA in filenamesA:
             if isinstance(fileA, np.ndarray):
                 dataset.load_array(fileA, norm_array=normalized)
-            else: 
+            else:
                 dataset.load_from_file(
                     [
                         fileA,
@@ -143,8 +147,9 @@ class ProjectTester(object):
                 filename_ori = extract_filename(
                     fileA, replace=True, old_name="source.tif", rep_name="pred.tiff"
                 )
-                tif = tifffile.TiffWriter(self.opt.output_path / filename_ori,
-                                          bigtiff=True)
+                tif = tifffile.TiffWriter(
+                    self.opt.output_path / filename_ori, bigtiff=True
+                )
                 tif.save(fB, compress=9, photometric="minisblack", metadata=None)
                 tif.close()
                 print(filename_ori + " saved")

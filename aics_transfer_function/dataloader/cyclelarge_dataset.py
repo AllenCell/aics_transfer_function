@@ -77,7 +77,9 @@ class cyclelargeDataset(Dataset):
             new_size = src_img.shape
 
         overlap_step = 0.5
-        self.positionA = [new_size, ]
+        self.positionA = [
+            new_size,
+        ]
         px_list, py_list, pz_list = [], [], []
         px, py, pz = 0, 0, 0
         while px < new_size[2] - self.size_in[2]:
@@ -105,8 +107,8 @@ class cyclelargeDataset(Dataset):
                             axis=0,
                         )
                     )
-                    (self.imgA_path).append('default')
-                    (self.imgA_short_path).append('default_short')
+                    (self.imgA_path).append("default")
+                    (self.imgA_short_path).append("default_short")
 
                     self.positionA.append((pz_in, py_in, px_in))
                     self.for_calc_ave_offset.append(False)
