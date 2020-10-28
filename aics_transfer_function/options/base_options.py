@@ -56,7 +56,7 @@ class BaseOptions:
         message += "\n----------------- End -------------------\n"
         print(message)
 
-    def parse(self, local_dir: Union(str, Path) = "./"):
+    def parse(self, local_dir: Union[str, Path] = "./"):
         """
         parse the option arguments and fill with default values when missing
         """
@@ -77,7 +77,7 @@ class BaseOptions:
         opt = Munch(opt_dict)
 
         # validate the existence of the model
-        if os.path.exists(opt.load_trained_model["path"]):
+        if not os.path.exists(opt.load_trained_model["path"]):
             model_path = Path(local_dir) / Path(self.config_file) / "latest.pth"
             zoo_client.download_model(
                 opt.load_trained_model["path"],
