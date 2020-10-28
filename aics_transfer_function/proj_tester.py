@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import os
 import numpy as np
 import tifffile
 
@@ -87,7 +87,10 @@ class ProjectTester(object):
 
     def run_inference(self):
 
-        filenamesA = get_filenames(self.opt.datapath["source"])
+        if os.path.isfile(self.opt.datapath["source"]):
+            filenamesA = [self.opt.datapath["source"], ]
+        else:
+            filenamesA = get_filenames(self.opt.datapath["source"])
         dataset = cyclelargeDataset(self.opt, aligned=True)
 
         self.opt.size_out = dataset.get_size_out()
