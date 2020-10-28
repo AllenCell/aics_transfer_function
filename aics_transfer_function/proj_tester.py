@@ -10,6 +10,8 @@ from .util.misc import get_filenames
 
 
 def extract_filename(filename, replace=False, old_name="", rep_name=""):
+    """ extract the base name and reuse for output """
+
     filename_rev = filename[::-1]
     idx = filename_rev.index("/")
     new = filename_rev[0:idx][::-1]
@@ -19,6 +21,8 @@ def extract_filename(filename, replace=False, old_name="", rep_name=""):
 
 
 def arrange(opt, data, output, position):
+    """ take care of the sliding window application of the model """
+
     data = data[0, 0].cpu().numpy()
     za, ya, xa = position
     patch_size = data.shape
@@ -64,7 +68,8 @@ def arrange(opt, data, output, position):
 
 class ProjectTester(object):
     """
-    Main class for applying a trained transfer function model
+    Base class for applying a trained transfer function model for
+    validation or inference purpose
     """
 
     def __init__(self, opt):
