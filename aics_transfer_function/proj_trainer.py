@@ -183,9 +183,9 @@ class ProjectTrainer(object):
                 if total_iters % self.opt.save["print_freq"] == 0:
                     losses = model.get_current_losses()
                     with open(self.opt.resultroot / Path("train.log"), "a") as log_file:
-                        tc = (
-                            time.time() - iter_start_time
-                        ) / self.opt.network["batch_size"]
+                        tc = (time.time() - iter_start_time) / self.opt.network[
+                            "batch_size"
+                        ]
                         message = f"(epoch: {epoch}, iters: {total_iters}, time: {tc})"
                         for k, v in losses.items():
                             message += f"{k}: {v}"
