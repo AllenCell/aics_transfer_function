@@ -8,9 +8,6 @@ Python package for building 3d computational transfer function models for light 
 
 ---
 
-## Features
-* Store values and retain the prior value in memory
-* ... some other functionality
 
 ## Quick Start
 
@@ -49,7 +46,7 @@ For full package documentation please visit [AllenCell.github.io/aics_transfer_f
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information related to developing the code.
 
 
-The implementation of this repo was partially inspired by https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix. A few key functions were reused. 
+The implementation of this repo was partially inspired by https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix. A few core functions were reused. 
 
 ***Free software: Allen Institute Software License***
 
