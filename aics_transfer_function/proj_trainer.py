@@ -88,6 +88,8 @@ class ProjectTrainer(object):
             + self.opt.training_setting["niter_decay"]
             + 1
         )
+
+        # start training
         for epoch in range(1, total_epoch):
             # outer loop for different epochs;
             # we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
@@ -100,6 +102,8 @@ class ProjectTrainer(object):
 
             # TODO: check AA code
             if self.opt.network["model"] in ["stn"]:
+
+                # determine the training strategy
                 self.opt.stn_first_stage = str(self.opt.stn_first_stage)
                 self.opt.stn_loop_stage = str(self.opt.stn_loop_stage)
                 if epoch_for_stage_index >= len(self.opt.stn_first_stage):
@@ -132,6 +136,7 @@ class ProjectTrainer(object):
                         dataset.stn_adjust_dict = {}
                         adjust_dict = {}
 
+            # get data for this epoch
             idxA = random.sample(
                 range(len(self.filenamesA)), self.opt.training_setting["imgs_per_epoch"]
             )
@@ -158,7 +163,7 @@ class ProjectTrainer(object):
 
                 # TODO: check AA code
                 if self.opt.network["model"] in ["stn"]:
-                    if self.opt.model["stn_adjust_image"] and model.stage == 2:
+                    if self.opt.stn_adjust_image and model.stage == 2:
                         fnA = data["A_paths"]
                         shift_zyx = model.get_shift().cpu().detach().numpy()
                         if fnA in adjust_dict:
@@ -168,17 +173,14 @@ class ProjectTrainer(object):
                                 shift_zyx,
                             ]
 
-                # just a quick sanity check
-                if total_iters == 1:
-                    print(data["A"].shape)
-                    print(data["B"].shape)
-
                 # print the loss
+                print("here 1111")
                 losses = model.get_current_losses()
                 message = f"(epoch: {epoch}, iters: {total_iters})"
                 for k, v in losses.items():
                     message += f"{k}: {v}"
                 print(message)
+                print("here 2222")
 
                 if total_iters % self.opt.save["print_freq"] == 0:
                     losses = model.get_current_losses()

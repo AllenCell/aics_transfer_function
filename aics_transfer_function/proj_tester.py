@@ -157,12 +157,17 @@ class ProjectTester(object):
 
     def run_validation(self):
 
+        from skimage.metrics import structural_similarity as ssim
+        import pandas as pd
+
         filenamesA, filenamesB = get_filenames(
             self.opt.datapath["source"], self.opt.datapath["target"]
         )
         dataset = cyclelargeDataset(self.opt, aligned=True)
 
         self.opt.size_out = dataset.get_size_out()
+
+        val_report = []
 
         for fileA, fileB in zip(filenamesA, filenamesB):
             dataset.load_from_file(
@@ -180,7 +185,6 @@ class ProjectTester(object):
             fB = np.zeros(position[0]).astype("float32")
             fB0 = np.zeros(position[0]).astype("float32")
 
-            # print(position)
             for i, data in enumerate(dataset):
                 self.model.set_input(data)  # unpack data from data loader
 
@@ -208,3 +212,16 @@ class ProjectTester(object):
             tif.close()
             print(filename_ori + " saved")
             ###########################################################################
+
+            # calculate pearson correliation and ssim
+            corr_mat = np.corrcoef(np.ravel(rB), np.ravel(fB))
+            corr_value = corr_mat[1, 0]
+
+            ssim_value = ssim(rB, fB, data_range=fB.max() - fB.min())
+
+            val_report.append(
+                {"name": filename_ori, "corr": corr_value, "ssim": ssim_value}
+            )
+
+        val_df = pd.DataFrame(val_report)
+        val_df.to_csv(self.opt.output_path / "val_report.csv")
