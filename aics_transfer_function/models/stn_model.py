@@ -112,7 +112,7 @@ class StnModel(BaseModel):
             net_opt["norm"],
             net_opt["init_type"],
             net_opt["init_gain"],
-            device=self.device
+            device=self.device,
         )
 
         if self.isTrain:

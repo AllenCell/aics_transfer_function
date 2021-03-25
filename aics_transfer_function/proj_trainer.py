@@ -174,13 +174,11 @@ class ProjectTrainer(object):
                             ]
 
                 # print the loss
-                print("here 1111")
                 losses = model.get_current_losses()
                 message = f"(epoch: {epoch}, iters: {total_iters})"
                 for k, v in losses.items():
                     message += f"{k}: {v}"
                 print(message)
-                print("here 2222")
 
                 if total_iters % self.opt.save["print_freq"] == 0:
                     losses = model.get_current_losses()
